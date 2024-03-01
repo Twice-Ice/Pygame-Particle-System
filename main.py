@@ -14,7 +14,7 @@ while not doExit:
 	delta = clock.tick(FPS) / 1000
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
-			doExit = True #lets you quit program
+			doExit = True #lets you quit parogram
 	screen.fill((0, 0, 0))
 	
 	boss.update(screen)
