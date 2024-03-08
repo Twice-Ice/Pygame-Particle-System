@@ -152,13 +152,21 @@ class ParticleEmitter:
 		[possible attributes include: randXVelo, randYVelo, gravity, randAngle, and moveOnAngle.]
 	[initParticleAttributes is the attributes you apply to the particles when initializing them.]
 		[possible attributes are the same as for liveParticleAttributes.]
+
+	Attribute list:
+		randYVelo
+		randXVelo
+		gravity
+		randAngle
+		moveOnAngle
 	'''
-	def __init__(self, pos = Vector2(0, 0), maxParticles = 10, ppf = 1, particleTime = 100, liveParticleAttributes = [["randXVelo", 5], ["gravity", [100, .25]]], initParticleAttributes = []): #ppf = particles per frame
+	def __init__(self, pos = Vector2(0, 0), maxParticles = 10, ppf = 1, particleTime = 100, particleColors : tuple = (255, 255, 255), liveParticleAttributes = [["randXVelo", 5], ["gravity", [100, .25]]], initParticleAttributes = []): #ppf = particles per frame
 		self.pos = pos
 		self.maxParticles = maxParticles
 		self.particleList = []
 		self.ppf = ppf
 		self.particleTime = particleTime
+		self.particleColors = particleColors
 		self.liveParticleAttributes = liveParticleAttributes
 		self.initParticleAttributes = initParticleAttributes
 
@@ -170,7 +178,7 @@ class ParticleEmitter:
 		'''new particles are set up here. If the maximum particles has been reached, no new particles will be added.'''
 		for i in range(self.ppf):
 			if len(self.particleList) <= self.maxParticles:
-				self.particleList.append(Particle(Vector2(0, 0), self.particleTime, self.initParticleAttributes))
+				self.particleList.append(Particle(Vector2(0, 0), self.particleTime, self.initParticleAttributes, self.particleColors))
 
 		'''loops through and updates all particles in the list.'''
 		for i in range(len(self.particleList)-1, 0, -1):
