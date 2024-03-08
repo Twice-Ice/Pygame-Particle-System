@@ -10,7 +10,7 @@ doExit = False
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((SCREEN_SIZE))
 
-testParticleEmitter = ParticleEmitter(Vector2(SCREEN_SIZE)//2, 100, 1)
+testParticleEmitter = ParticleEmitter(Vector2(SCREEN_SIZE)//2, 1000, 1, 1000, [["moveOnAngle"]], [["randAngle"]])
 
 boss = Boss((400, 400))
 guy = Player(1)
