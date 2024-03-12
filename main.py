@@ -10,9 +10,26 @@ doExit = False
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((SCREEN_SIZE))
 
-testParticleEmitter = ParticleEmitter(Vector2(SCREEN_SIZE)//2, 1000, 1, 1000, (255, 255, 255), [["adjustSize", [[0, .2], 50]], ["moveOnAngle", 2.5]], [["randAngle"]])
+testParticleEmitter = ParticleEmitter(
+	pos = Vector2(SCREEN_SIZE)//2,
+	# celeste :)
+	# updateAttributes = [["colorOverLife", [(91, 206, 250), (91, 206, 250), (0, 0, 0), (245, 169, 184), (245, 169, 184), (0, 0, 0), (255, 255, 255), (255, 255, 255), (0, 0, 0), (245, 169, 184), (245, 169, 184), (0, 0, 0), (91, 206, 250), (91, 206, 250)]]],
+	# initAttributes = [["randAngle"], ["moveOnAngle", 20]],
+	# fire
+	# updateAttributes = [["colorOverLife", [(0, 0, 0), (100, 20, 200), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]], ["randVelo", 2], ["gravity", -.025], ["randYVelo", [0, 1]]],
+	# initAttributes = [["randAngle", [310, 320]], ["moveOnAngle", 40]],
+	updateAttributes = [["gravity", .02], ["colorOverVelo", [10, "dom", [(0, 0, 0), (100, 20, 200), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]]]],
+	initAttributes = [["randAngle"], ["moveOnAngle", 20]],
+	maxParticles = 1000,
+	ppf = 5,
+	particleLifetime = 1000,
+	# maxVelo = Vector2(),
+	# color = (255, 255, 255),
+	size = 10
+	)
 
 boss = Boss((400, 400))
+
 guy = Player(1)
 while not doExit:
 	delta = clock.tick(FPS) / 1000

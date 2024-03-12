@@ -1,8 +1,31 @@
 import pygame
 import math
 import random
-from pygame import Vector2, Rect
+from pygame import Vector2, Vector3, Rect
 from globals import SCREEN_RECT
+
+def randfloat(min, max):
+	#gets the correct scaling to handle with random values. This allows for ranges of .0005 to .01 for example.
+	scale = 10
+	if type(min) == float or type(max) == float:
+		#this code gets the length of the number after the decimal. It's then able to have scale set to the largest one of the two lengths.
+		try:
+			minScale = 10**len(str(min).split(".")[1])
+		except:
+			minScale = 0
+		try:
+			maxScale = 10**len(str(max).split(".")[1])
+		except:
+			maxScale = 0
+		scale = minScale if minScale > maxScale else maxScale
+
+	return random.randint(int(min * scale), int(max * scale))/scale
+
+def moveBetweenColors(color1, color2, percent):
+			r = math.floor((color2[0] - color1[0]) * percent + color1[0])
+			g = math.floor((color2[1] - color1[1]) * percent + color1[1])
+			b = math.floor((color2[2] - color1[2]) * percent + color1[2])
+			return (r, g, b)
 
 class Particle:
 	'''
@@ -15,13 +38,16 @@ class Particle:
 	The positions of the particles will be relative to the particle emitter instead of world coords
 	Velo is set by default, but it can be updated and changed to different values within the attributes of the particle init.
 	'''
-	def __init__(self, pos : Vector2 = Vector2(0, 0), time : int = 100, attributes : list = [], color : tuple = (255, 255, 255), size : float = 5.0):
+	def __init__(self, pos : Vector2 = Vector2(0, 0), time : int = 100, attributes : list = [], color : tuple = (255, 255, 255), size : float = 5.0, maxVelo : Vector2 = Vector2(100, 100)):
 		self.pos = pos
 		self.velo = Vector2(0, 0)
 		self.color = color
 		self.time = time
+		self.lifetime = time
 		self.size = size
 		self.angle = 0
+		self.maxVelo = maxVelo
+		self.emitterPos = Vector2(0, 0)
 		self.applyAttributes(attributes)
 
 	'''
@@ -33,6 +59,7 @@ class Particle:
 	'''
 	def update(self, screen, emitterPos, attributes):
 		self.time -= 1 #reduces the lifetime of the particle. This should probably be set to delta and adjusted by irl time instead of frame time but whatever.
+		self.emitterPos = emitterPos
 		self.applyAttributes(attributes) #applies attributes
 		self.updatePos() #updates the position of the particle based on self.velo
 		self.draw(screen, emitterPos) #draws the particle to the screen.
@@ -48,8 +75,11 @@ class Particle:
 				self.randYVelo(attributes[i][1] if len(attributes[i]) > 1 else 5)
 			elif attributes[i][0] == "randXVelo":
 				self.randXVelo(attributes[i][1] if len(attributes[i]) > 1 else 5)
+			elif attributes[i][0] == "randVelo":
+				self.randXVelo(attributes[i][1] if len(attributes[i]) > 1 else 5)
+				self.randYVelo(attributes[i][1] if len(attributes[i]) > 1 else 5)
 			elif attributes[i][0] == "gravity":
-				self.gravity(attributes[i][1] if len(attributes[i]) > 1 else [100, .25])
+				self.gravity(attributes[i][1] if len(attributes[i]) > 1 else .25)
 			elif attributes[i][0] == "randAngle":
 				self.randAngle(attributes[i][1] if len(attributes[i]) > 1 else [0, 360])
 			elif attributes[i][0] == "moveOnAngle":
@@ -58,6 +88,16 @@ class Particle:
 				self.randSize(attributes[i][1] if len(attributes[i]) > 1 else 10)
 			elif attributes[i][0] == "adjustSize":
 				self.adjustSize(attributes[i][1] if len(attributes[i]) > 1 else [2, [3, 10]])
+			elif attributes[i][0] == "sizeOverLife":
+				self.sizeOverLife(attributes[i][1] if len(attributes[i]) > 1 else 50)
+			elif attributes[i][0] == "randColor":
+				self.randColor(attributes[i][1] if len(attributes[i]) > 1 else [(255, 255, 255)])
+			elif attributes[i][0] == "colorOverLife":
+				self.colorOverLife(attributes[i][1] if len(attributes[i]) > 1 else [(0, 0, 0), (255, 255, 255)])
+			elif attributes[i][0] == "colorOverDistance":
+				self.colorOverDistance(attributes[i][1] if len(attributes[i]) > 1 else [100, [(0, 0, 0), (255, 255, 255)]])
+			elif attributes[i][0] == "colorOverVelo":
+				self.colorOverVelo(attributes[i][1] if len(attributes[i]) > 1 else [100, "avg", [(0, 0, 0), (255, 255, 255)]])
 			else:
 				pass
 
@@ -73,20 +113,20 @@ class Particle:
 
 	'''
 	updates the position of the particle based on it's velo.
+	velocity is capped here based on maxVelo.
 	'''
 	def updatePos(self):
+		if self.velo.x > self.maxVelo.x: self.velo.x = self.maxVelo.x
+		if self.velo.y > self.maxVelo.y: self.velo.y = self.maxVelo.y
 		self.pos += self.velo
-
+		
 	'''
-	- vars
-	[vars should contain the maximum fall speed as well as the change in velocity each frame.]
+	- pow
+	[pow is the amount of velocity applied each frame this function is called.]
 
 	applies gravity
 	'''
-	def gravity(self, vars):
-		maxVelo = vars[0]
-		pow = vars[1]
-		if self.velo.y <= maxVelo:
+	def gravity(self, pow):
 			self.velo.y += pow
 	
 	'''
@@ -100,8 +140,8 @@ class Particle:
 		if type(pow) == list:
 			powMin, powMax = pow[0], pow[1]
 		else:
-			powMin, powMax = pow, pow
-		self.velo += Vector2(0, random.randint(-powMin, powMax)/10)
+			powMin, powMax = -pow, pow
+		self.velo += Vector2(0, randfloat(powMin, powMax)/10)
 
 	'''
 	- pow
@@ -115,7 +155,7 @@ class Particle:
 			powMin, powMax = pow[0], pow[1]
 		else:
 			powMin, powMax = pow, pow
-		self.velo += Vector2(random.randint(-powMin, powMax)/10, 0)
+		self.velo += Vector2(randfloat(-powMin, powMax)/10, 0)
 
 	'''
 	- angles
@@ -171,7 +211,6 @@ class Particle:
 	def adjustSize(self, settings):
 		pow = settings[0]
 		minMax = settings[1]
-		scale = 1
 
 		#sets all minMax values depending on type(minMax)
 		if type(minMax) == list:
@@ -191,27 +230,138 @@ class Particle:
 		else:
 			raise TypeError("type(pow) != list, float, or int")
 		
-		#gets the correct scaling to handle with random values. This allows for ranges of .0005 to .01 for example.
-		if type(minPow) == float or type(maxPow) == float:
-			#this code gets the length of the number after the decimal. It's then able to have scale set to the largest one of the two lengths.
-			try:
-				minPowScale = 10**len(str(minPow).split(".")[1])
-			except:
-				minPowScale = 0
-			try:
-				maxPowScale = 10**len(str(maxPow).split(".")[1])
-			except:
-				maxPowScale = 0
-			scale = minPowScale if minPowScale > maxPowScale else maxPowScale
-		
-		self.size += random.randint(minPow * scale, maxPow * scale)/scale
+		self.size += randfloat(minPow, maxPow)
 			
 		#limits size to minMax values
 		if self.size < min:
 			self.size = min
 		elif self.size > max:
 			self.size = max
-			
+
+	'''
+	- endSize
+	[endSize is the size that the particle will have when it's lifetime has reached 0.]
+
+	Linearly scales particle size between the size at init, and endSize.
+	'''
+	def sizeOverLife(self, endSize):
+		self.size += endSize/self.lifetime
+
+	'''
+	- settings[colorRange, colorType]
+	[colorRange must be at least one (rgb) tuple, but specific values can be set with a list of two (rgb) tuples.]
+	[colorType is optional, and will default to color, but if set to monotone, colorType will randomly pick equally from all color ranges.]
+
+	Randomly selects a color from a range of colors.
+	'''
+	def randColor(self, settings):
+		if type(settings) == list:
+			colorRange = settings[0]
+			try:
+				randType = settings[1]
+			except:
+				randType = "color"
+		else:
+			raise TypeError(f"Settings not set properly.\nSettings should include color values as well as the type of random color.\nSuch as \"monotone,\" the 2nd index can be left blank and the type will default to colored.")
+		if type(colorRange) == list:
+			color1 = colorRange[0]
+			color2 = colorRange[1]
+		elif type(colorRange) == tuple:
+			color1 = (0, 0, 0)
+			color2 = colorRange
+		else:
+			raise TypeError(f"ColorRange != list or tuple, colorRange is a {type(colorRange)}")
+		
+		if randType == "monotone":
+			val = random.randint(0, 100)/100
+			r = math.floor((color2[0] - color1[0]) * val + color1[0])
+			g = math.floor((color2[1] - color1[1]) * val + color1[1])
+			b = math.floor((color2[2] - color1[2]) * val + color1[2])
+			self.color = self.color + (r, g, b)
+		elif randType == "color":
+			self.color = (random.randint(color1[0], color2[0]), random.randint(color1[1], color2[1]), random.randint(color1[2], color2[2]))
+		else:
+			raise SyntaxError(f"{randType} for randType is not a valid option.")
+		
+	'''
+	- colorRange
+	[colorRange must be at least one (rgb) tuple, but specific values can be set with a list of any number more (rgb) tuples.]
+	[colorRange doesn't have a maximum amount of specific colors to cycle through, and will display all colors from left to right throughout the lifespan of the particle.]
+
+	Interpolates between color values over the lifespan of a particle.
+	'''
+	def colorOverLife(self, colorRange):
+		if type(colorRange) == tuple:
+			colors = [self.color, colorRange]
+		elif type(colorRange) == list:
+			colors = colorRange
+		else:
+			raise TypeError(f"type(colorRange) != list or tuple. colorRange = {colorRange}, which is a {type(colorRange)}.")
+
+		for i in range(len(colors)-1):
+			lifetimePercent = 1 - self.time/self.lifetime
+			if lifetimePercent <= 1/(len(colors)-1) * (i + 1) and lifetimePercent > 1/(len(colors)-1) * i:
+				self.color = moveBetweenColors(colors[i], colors[i+1], lifetimePercent * (len(colors) - 1) - i)
+
+	'''
+	- settings[maxDist, colorRange]
+	[colorRange must be at least one (rgb) tuple, but specific values can be set with a list of any number more (rgb) tuples.]
+	[colorRange doesn't have a maximum amount of specific colors to cycle through, and will display all colors from left to right based on the distance of the particle from it's emitter.]
+
+	Interpolates between color values based on the distance of the particle from the particle's emitter.
+	'''
+	def colorOverDistance(self, settings):
+		maxDist = settings[0]
+		colorRange = settings[1]
+		if type(colorRange) == tuple:
+			colors = [self.color, colorRange]
+		elif type(colorRange) == list:
+			colors = colorRange
+		else:
+			raise TypeError(f"type(colorRange) != list or tuple. colorRange = {colorRange}, which is a {type(colorRange)}.")
+
+		for i in range(len(colors)-1):
+			lifetimePercent = abs(math.sqrt((self.pos.x)**2 + (self.pos.y)**2)/maxDist)
+			if lifetimePercent == 0: lifetimePercent = 0.001
+			elif lifetimePercent > 1: lifetimePercent = 1
+			if lifetimePercent <= 1/(len(colors)-1) * (i + 1) and lifetimePercent > 1/(len(colors)-1) * i:
+				self.color = moveBetweenColors(colors[i], colors[i+1], lifetimePercent * (len(colors) - 1) - i)
+
+	'''
+	- settings[maxVelo, veloType, colorRange]
+	[maxVelo is the velocity at which the final color is determined.]
+	[veloType is the way that the colors are calculated. The types are avg and dom.]
+		[dom is the most dominate velocity of x and y.]
+		[avg is the average velocity between x and y.]
+	[colorRange must be at least one (rgb) tuple, but specific values can be set with a list of any number more (rgb) tuples.]
+	[colorRange doesn't have a maximum amount of specific colors to cycle through, and will display all colors from left to right based on the velocity of the particle.]
+
+	Interpolates between color values based on the velocity of the particle.
+	'''
+	def colorOverVelo(self, settings):
+		maxVelo = settings[0]
+		veloType = settings[1] if settings[1] != None else "avg"
+		colorRange = settings[2]
+
+		if type(colorRange) == tuple:
+			colors = [self.color, colorRange]
+		elif type(colorRange) == list:
+			colors = colorRange
+		else:
+			raise TypeError(f"type(colorRange) != list or tuple. colorRange = {colorRange}, which is a {type(colorRange)}.")
+
+		for i in range(len(colors)-1):
+			if veloType == "avg":
+				lifetimePercent = ((abs(self.velo.x) + abs(self.velo.y))/2)/maxVelo
+			elif veloType == "dom":
+				lifetimePercent = (abs(self.velo.x) if abs(self.velo.x) > abs(self.velo.y) else abs(self.velo.y))/maxVelo
+			else:
+				raise NameError(f"{veloType} isn't a color option.")
+			if lifetimePercent <= 0: lifetimePercent = 0.01
+			elif lifetimePercent >= 1: lifetimePercent = 1
+			if lifetimePercent <= 1/(len(colors)-1) * (i + 1) and lifetimePercent > 1/(len(colors)-1) * i:
+				self.color = moveBetweenColors(colors[i], colors[i+1], lifetimePercent * (len(colors) - 1) - i)
+
 class ParticleEmitter:
 	'''
 	Attribute list:
@@ -225,20 +375,23 @@ class ParticleEmitter:
 	
 	[ppf is particles per frame.]
 	[particle time is the lifetime of the particles]
-	[liveParticleAttributes is the attributes you apply to the particles when updating them.]
+	[updateAttributes is the attributes you apply to the particles when updating them.]
 		[possible attributes include: randXVelo, randYVelo, gravity, randAngle, and moveOnAngle.]
-	[initParticleAttributes is the attributes you apply to the particles when initializing them.]
-		[possible attributes are the same as for liveParticleAttributes.]
+	[initAttributes is the attributes you apply to the particles when initializing them.]
+		[possible attributes are the same as for updateAttributes.]
 	'''
-	def __init__(self, pos = Vector2(0, 0), maxParticles = 10, ppf = 1, particleTime = 100, particleColors : tuple = (255, 255, 255), liveParticleAttributes = [["randXVelo", 5], ["gravity", [100, .25]]], initParticleAttributes = []): #ppf = particles per frame
+	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", [100, .25]]], initAttributes : list = [], maxParticles : int = 10, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo : Vector2 = Vector2(100, 100)): #ppf = particles per frame
 		self.pos = pos
 		self.maxParticles = maxParticles
 		self.particleList = []
 		self.ppf = ppf
-		self.particleTime = particleTime
-		self.particleColors = particleColors
-		self.liveParticleAttributes = liveParticleAttributes
-		self.initParticleAttributes = initParticleAttributes
+		self.spawnParticle = 0
+		self.particleLifetime = particleLifetime
+		self.color = color
+		self.updateAttributes = updateAttributes
+		self.initAttributes = initAttributes
+		self.size = size
+		self.maxVelo = maxVelo
 
 	def update(self, screen, pos = None):
 		'''if the particle emitter is moved, this is where it updates self.pos.'''
@@ -246,14 +399,23 @@ class ParticleEmitter:
 			self.pos = pos
 
 		'''new particles are set up here. If the maximum particles has been reached, no new particles will be added.'''
-		for i in range(self.ppf):
-			if len(self.particleList) <= self.maxParticles:
-				self.particleList.append(Particle(Vector2(0, 0), self.particleTime, self.initParticleAttributes, self.particleColors))
+		if self.ppf >= 1:
+			for i in range(self.ppf):
+				if len(self.particleList) <= self.maxParticles:
+					self.particleList.append(Particle(Vector2(0, 0), self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo))
+		elif self.ppf < 1 and self.ppf >= 0:
+			self.spawnParticle += self.ppf
+			if self.spawnParticle > 1: 
+				self.spawnParticle -= 1
+				if len(self.particleList) <= self.maxParticles:
+					self.particleList.append(Particle(Vector2(0, 0), self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo))
+		else:
+			raise ValueError(f"self.ppf == {self.ppf}, which is less than 0")
 
 		'''loops through and updates all particles in the list.'''
 		for i in range(len(self.particleList)-1, 0, -1):
 			'''updates the particles and passes the update attributes.'''
-			self.particleList[i].update(screen, self.pos, self.liveParticleAttributes)
+			self.particleList[i].update(screen, self.pos, self.updateAttributes)
 			'''removes the particles if they aren't on screen, or if their lifetime has run out.'''
 			'''the collide rect is set to the screen, adjusted for the size of the particle'''
 			collideRect = Rect(SCREEN_RECT.x - self.particleList[i].size, SCREEN_RECT.y - self.particleList[i].size, SCREEN_RECT.w + (self.particleList[i].size * 2), SCREEN_RECT.h + (self.particleList[i].size * 2))
