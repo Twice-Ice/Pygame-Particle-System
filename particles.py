@@ -2,7 +2,7 @@ import pygame
 import math
 import random
 from pygame import Vector2, Vector3, Rect
-from globals import SCREEN_RECT
+from globals import SCREEN_RECT, SCREEN_SIZE
 
 def randfloat(min, max):
 	#gets the correct scaling to handle with random values. This allows for ranges of .0005 to .01 for example.
@@ -35,19 +35,19 @@ class Particle:
 	- color of particle
 	- size of particle
 
-	The positions of the particles will be relative to the particle emitter instead of world coords
 	Velo is set by default, but it can be updated and changed to different values within the attributes of the particle init.
 	'''
-	def __init__(self, pos : Vector2 = Vector2(0, 0), time : int = 100, attributes : list = [], color : tuple = (255, 255, 255), size : float = 5.0, maxVelo : Vector2 = Vector2(100, 100)):
-		self.pos = pos
-		self.velo = Vector2(0, 0)
+	def __init__(self, pos : Vector2 = Vector2(0, 0), velo : Vector2 = Vector2(0, 0), emitterPos : Vector2 = Vector2(100, 100), time : int = 100, attributes : list = [], color : tuple = (255, 255, 255), size : float = 5.0, maxVelo : Vector2 = Vector2(100, 100)):
+		self.pos = pos + emitterPos
+		self.velo = Vector2(0, 0) - velo/2
 		self.color = color
 		self.time = time
 		self.lifetime = time
+		self.emitterPos = emitterPos
 		self.size = size
 		self.angle = 0
+		self.delta = 1
 		self.maxVelo = maxVelo
-		self.emitterPos = Vector2(0, 0)
 		self.applyAttributes(attributes)
 
 	'''
@@ -57,12 +57,14 @@ class Particle:
 
 	updates particles.
 	'''
-	def update(self, screen, emitterPos, attributes):
+	def update(self, screen, attributes, emitterPos, delta, velo : Vector2 = Vector2(0, 0)):
 		self.time -= 1 #reduces the lifetime of the particle. This should probably be set to delta and adjusted by irl time instead of frame time but whatever.
+		self.delta = delta
 		self.emitterPos = emitterPos
+		self.velo += velo
 		self.applyAttributes(attributes) #applies attributes
 		self.updatePos() #updates the position of the particle based on self.velo
-		self.draw(screen, emitterPos) #draws the particle to the screen.
+		self.draw(screen) #draws the particle to the screen.
 
 	'''
 	applies the attributes to the particle based on the list inputed to this function.
@@ -70,46 +72,55 @@ class Particle:
 	a dict would probably be best.
 	'''
 	def applyAttributes(self, attributes):
+		attributeFunctions = {
+			"randYVelo" : self.randYVelo,
+			"randXVelo" : self.randXVelo,
+			"randVelo" : None,
+			"gravity" : self.gravity,
+			"randAngle" : self.randAngle,
+			"moveOnAngle" : self.moveOnAngle,
+			"randSize" : self.randSize,
+			"adjustSize" : self.adjustSize,
+			"sizeOverLife" : self.sizeOverLife,
+			"sizeOverDistance" : None,
+			"sizeOverVelo" : None,
+			"randColor" : self.randColor,
+			"adjustColor" : None,
+			"colorOverLife" : self.colorOverLife,			
+			"colorOverDistance" : self.colorOverDistance,
+			"colorOverVelo" : self.colorOverVelo,
+			"drag" : self.drag,
+			"destroyOnColor" : None, #deletes the particle when it gets to a certain color?
+			}
+		defaultSettings = {
+			"randYVelo" : 5,
+			"randXVelo" : 5,
+			"randVelo" : 5,
+			"gravity" : .25,
+			"randAngle" : [0, 360],
+			"moveOnAngle" : 5,
+			"randSize" : 10,
+			"adjustSize" : [2, [3, 10]],
+			"sizeOverLife" : 50,
+			"sizeOverDistance" : None,
+			"sizeOverVelo" : None,
+			"randColor" : [(255, 255, 255)],
+			"adjustColor" : None,
+			"colorOverLife" : [(0, 0, 0), (255, 255, 255)],
+			"colorOverDistance" : [100, [(0, 0, 0), (255, 255, 255)]],
+			"colorOverVelo" : [100, "avg", [(0, 0, 0), (255, 255, 255)]],
+			"drag" : [.15, .2],
+			"destroyOnColor" : None,
+		}
 		for i in range(len(attributes)):
-			if attributes[i][0] == "randYVelo":
-				self.randYVelo(attributes[i][1] if len(attributes[i]) > 1 else 5)
-			elif attributes[i][0] == "randXVelo":
-				self.randXVelo(attributes[i][1] if len(attributes[i]) > 1 else 5)
-			elif attributes[i][0] == "randVelo":
-				self.randXVelo(attributes[i][1] if len(attributes[i]) > 1 else 5)
-				self.randYVelo(attributes[i][1] if len(attributes[i]) > 1 else 5)
-			elif attributes[i][0] == "gravity":
-				self.gravity(attributes[i][1] if len(attributes[i]) > 1 else .25)
-			elif attributes[i][0] == "randAngle":
-				self.randAngle(attributes[i][1] if len(attributes[i]) > 1 else [0, 360])
-			elif attributes[i][0] == "moveOnAngle":
-				self.moveOnAngle(attributes[i][1] if len(attributes[i]) > 1 else 5)
-			elif attributes[i][0] == "randSize":
-				self.randSize(attributes[i][1] if len(attributes[i]) > 1 else 10)
-			elif attributes[i][0] == "adjustSize":
-				self.adjustSize(attributes[i][1] if len(attributes[i]) > 1 else [2, [3, 10]])
-			elif attributes[i][0] == "sizeOverLife":
-				self.sizeOverLife(attributes[i][1] if len(attributes[i]) > 1 else 50)
-			elif attributes[i][0] == "randColor":
-				self.randColor(attributes[i][1] if len(attributes[i]) > 1 else [(255, 255, 255)])
-			elif attributes[i][0] == "colorOverLife":
-				self.colorOverLife(attributes[i][1] if len(attributes[i]) > 1 else [(0, 0, 0), (255, 255, 255)])
-			elif attributes[i][0] == "colorOverDistance":
-				self.colorOverDistance(attributes[i][1] if len(attributes[i]) > 1 else [100, [(0, 0, 0), (255, 255, 255)]])
-			elif attributes[i][0] == "colorOverVelo":
-				self.colorOverVelo(attributes[i][1] if len(attributes[i]) > 1 else [100, "avg", [(0, 0, 0), (255, 255, 255)]])
-			else:
-				pass
-
-			#prints which attribute was applied. *Prints multiple times per frame depending on how many attributes there are.*
-			# if attributes[i][0] != None:
-			# 	print(f"applied {attributes[i][0]}.")
+			default = attributes[i][1] if len(attributes[i]) > 1 else defaultSettings[attributes[i][0]]
+			attributeFunctions[attributes[i][0]](default)
 	
 	'''
 	draws the particle relative to the particle emitter.
 	'''
-	def draw(self, screen, emitterPos):
-		pygame.draw.circle(screen, self.color, self.pos + emitterPos, math.floor(self.size))
+	def draw(self, screen):
+		pygame.draw.circle(screen, self.color, self.pos, math.floor(self.size))
 
 	'''
 	updates the position of the particle based on it's velo.
@@ -118,7 +129,7 @@ class Particle:
 	def updatePos(self):
 		if self.velo.x > self.maxVelo.x: self.velo.x = self.maxVelo.x
 		if self.velo.y > self.maxVelo.y: self.velo.y = self.maxVelo.y
-		self.pos += self.velo
+		self.pos += self.velo * self.delta
 		
 	'''
 	- pow
@@ -127,7 +138,7 @@ class Particle:
 	applies gravity
 	'''
 	def gravity(self, pow):
-			self.velo.y += pow
+		self.velo.y += pow
 	
 	'''
 	- pow
@@ -321,7 +332,7 @@ class Particle:
 			raise TypeError(f"type(colorRange) != list or tuple. colorRange = {colorRange}, which is a {type(colorRange)}.")
 
 		for i in range(len(colors)-1):
-			lifetimePercent = abs(math.sqrt((self.pos.x)**2 + (self.pos.y)**2)/maxDist)
+			lifetimePercent = abs(math.sqrt((self.pos.x - self.emitterPos.x)**2 + (self.pos.y - self.emitterPos.y)**2)/maxDist)
 			if lifetimePercent == 0: lifetimePercent = 0.001
 			elif lifetimePercent > 1: lifetimePercent = 1
 			if lifetimePercent <= 1/(len(colors)-1) * (i + 1) and lifetimePercent > 1/(len(colors)-1) * i:
@@ -362,6 +373,34 @@ class Particle:
 			if lifetimePercent <= 1/(len(colors)-1) * (i + 1) and lifetimePercent > 1/(len(colors)-1) * i:
 				self.color = moveBetweenColors(colors[i], colors[i+1], lifetimePercent * (len(colors) - 1) - i)
 
+	'''
+	- settings[pow, minVelo]
+	[pow is the amount of drag applied each frame.]
+	[minVelo is the minimum amount of velocity before setting the velo to 0. Make sure to keep minVelo > pow]
+
+	Applies drag to the particle each frame.
+	'''
+	def drag(self, settings):
+		pow = settings[0] * self.delta
+		minVelo = settings[1] * self.delta
+		if pow > minVelo: raise ValueError("pow > minVelo.")
+
+		if abs(self.velo.x) < minVelo:
+			self.velo.x = 0
+		else:
+			if self.velo.x < 0:
+				self.velo.x += pow
+			elif self.velo.x > 0:
+				self.velo.x -= pow
+
+		if abs(self.velo.y) < minVelo:
+			self.velo.y = 0
+		else:
+			if self.velo.y < 0:
+				self.velo.y += pow
+			elif self.velo.y > 0:
+				self.velo.y -= pow
+
 class ParticleEmitter:
 	'''
 	Attribute list:
@@ -380,12 +419,13 @@ class ParticleEmitter:
 	[initAttributes is the attributes you apply to the particles when initializing them.]
 		[possible attributes are the same as for updateAttributes.]
 	'''
-	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", [100, .25]]], initAttributes : list = [], maxParticles : int = 10, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo : Vector2 = Vector2(100, 100)): #ppf = particles per frame
+	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 10, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo : Vector2 = Vector2(100, 100)): #ppf = particles per frame
 		self.pos = pos
 		self.maxParticles = maxParticles
 		self.particleList = []
 		self.ppf = ppf
 		self.spawnParticle = 0
+		self.delta = 1
 		self.particleLifetime = particleLifetime
 		self.color = color
 		self.updateAttributes = updateAttributes
@@ -393,31 +433,47 @@ class ParticleEmitter:
 		self.size = size
 		self.maxVelo = maxVelo
 
-	def update(self, screen, pos = None):
+	'''
+	- screen
+	- delta
+	- pos
+	- velo
+	[screen is the screen to draw to.]
+	[delta is deltatime. (fps/1000)]
+	[pos is the position of where you want the emitter to be. If the pos is attached to a player for example, set pos as "player.pos" (or whatever your pos variable is named.)]
+	[velo is the velocity of whatever your emitter is attached to/impacted by. This is very sensitive, so be careful to not apply too much force here.]
+
+	Updates the emitter and every particle from the emitter. 
+	'''
+	def update(self, screen, delta = 1, pos = None, velo = None):
 		'''if the particle emitter is moved, this is where it updates self.pos.'''
 		if pos != None: 
-			self.pos = pos
+			self.pos = Vector2(pos)
+		if velo == None:
+			velo = Vector2(0, 0)
+		
+		self.delta = delta + 1
 
 		'''new particles are set up here. If the maximum particles has been reached, no new particles will be added.'''
 		if self.ppf >= 1:
 			for i in range(self.ppf):
 				if len(self.particleList) <= self.maxParticles:
-					self.particleList.append(Particle(Vector2(0, 0), self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo))
+					self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo))
 		elif self.ppf < 1 and self.ppf >= 0:
 			self.spawnParticle += self.ppf
 			if self.spawnParticle > 1: 
 				self.spawnParticle -= 1
 				if len(self.particleList) <= self.maxParticles:
-					self.particleList.append(Particle(Vector2(0, 0), self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo))
+					self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo))
 		else:
 			raise ValueError(f"self.ppf == {self.ppf}, which is less than 0")
 
 		'''loops through and updates all particles in the list.'''
 		for i in range(len(self.particleList)-1, 0, -1):
 			'''updates the particles and passes the update attributes.'''
-			self.particleList[i].update(screen, self.pos, self.updateAttributes)
+			self.particleList[i].update(screen, self.updateAttributes, delta = self.delta, emitterPos = self.pos)
 			'''removes the particles if they aren't on screen, or if their lifetime has run out.'''
 			'''the collide rect is set to the screen, adjusted for the size of the particle'''
 			collideRect = Rect(SCREEN_RECT.x - self.particleList[i].size, SCREEN_RECT.y - self.particleList[i].size, SCREEN_RECT.w + (self.particleList[i].size * 2), SCREEN_RECT.h + (self.particleList[i].size * 2))
-			if self.particleList[i].time == 0 or not collideRect.collidepoint(self.particleList[i].pos + self.pos):
+			if self.particleList[i].time == 0 or not collideRect.collidepoint(self.particleList[i].pos):
 				del self.particleList[i]
