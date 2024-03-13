@@ -24,15 +24,21 @@ testParticleEmitter = ParticleEmitter(
 	# pink fade
 	# updateAttributes = [["drag"], ["gravity", .02], ["colorOverVelo", [10, "dom", [(0, 0, 0), (100, 50, 50), (220, 100, 100), (220, 125, 125), (250, 150, 150), (0, 0, 0)]]]],
  	# initAttributes = [["randAngle"], ["moveOnAngle", 20]],
-	updateAttributes = [["gravity"], ["sizeOverLife"]],
+	updateAttributes = [["gravity"], ["sizeOverVelo", [10, "avg", [10, 1]]], ["randAdjustColor", [5, [(0, 0, 0), (150, 150, 150)]]], ["deleteOnColor", (255, 0, 0)]],
 	maxParticles = 1000,
 	ppf = 1,
 	particleLifetime = 100,
 	size = 10,
-	cull = False,
 	)
 
 boss = Boss((400, 400))
+
+tempColor = (25, 15, 532)
+if tempColor[0] == 25:
+	adjustTuple = (-25, 0, 0)
+
+tempColor = tuple(map(lambda i, j: i + j, tempColor, adjustTuple))
+print(tempColor)
 
 guy = Player(1)
 while not doExit:
@@ -43,7 +49,7 @@ while not doExit:
 	screen.fill((0, 0, 0))
 
 	testParticleEmitter.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
-	
+
 	boss.update(screen)
 	guy.update(delta,screen)
 	pygame.display.flip()

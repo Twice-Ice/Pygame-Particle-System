@@ -21,14 +21,9 @@ def randfloat(min, max):
 
 	return random.randint(int(min * scale), int(max * scale))/scale
 
-def moveBetweenColors(color1, color2, percent):
-	r = math.floor((color2[0] - color1[0]) * percent + color1[0])
-	g = math.floor((color2[1] - color1[1]) * percent + color1[1])
-	b = math.floor((color2[2] - color1[2]) * percent + color1[2])
-	return (r, g, b)
 
-def moveBetweenSizes(size1, size2, percent):
-	return (size2 - size1) * percent + size1
+
+
 
 class Particle:
 	'''
@@ -51,7 +46,10 @@ class Particle:
 		self.angle = 0
 		self.delta = 1
 		self.maxVelo = maxVelo
+		self.delete = False
 		self.applyAttributes(attributes)
+
+	# MAIN FUNCTIONS
 
 	'''
 	- screen to draw on
@@ -83,17 +81,18 @@ class Particle:
 			"randAngle" : self.randAngle,
 			"moveOnAngle" : self.moveOnAngle,
 			"randSize" : self.randSize,
-			"adjustSize" : self.adjustSize,
+			"randAdjustSize" : self.randAdjustSize,
 			"sizeOverLife" : self.sizeOverLife,
 			"sizeOverDistance" : self.sizeOverDistance,
-			"sizeOverVelo" : None,
+			"sizeOverVelo" : self.sizeOverVelo,
+			"deleteOnVelo" : self.deleteOnVelo,
 			"randColor" : self.randColor,
-			"adjustColor" : None,
+			"randAdjustColor" : self.randAdjustColor,
 			"colorOverLife" : self.colorOverLife,			
 			"colorOverDistance" : self.colorOverDistance,
 			"colorOverVelo" : self.colorOverVelo,
 			"drag" : self.drag,
-			"destroyOnColor" : None, #deletes the particle when it gets to a certain color?
+			"deleteOnColor" : self.deleteOnColor, #deletes the particle when it gets to a certain color?
 			}
 		defaultSettings = {
 			"randYVelo" : 5,
@@ -103,17 +102,18 @@ class Particle:
 			"randAngle" : [0, 360],
 			"moveOnAngle" : 5,
 			"randSize" : 10,
-			"adjustSize" : [2, [3, 10]],
+			"randAdjustSize" : [2, [3, 10]],
 			"sizeOverLife" : [1, 10, 5, 10, 1],
 			"sizeOverDistance" : [100, [1, 10, 5, 10, 1]],
-			"sizeOverVelo" : None,
+			"sizeOverVelo" : [10, "avg", [1, 15]],
+			"deleteOnVelo" : 0,
 			"randColor" : [(255, 255, 255)],
-			"adjustColor" : None,
+			"randAdjustColor" : [10, [(0, 0, 0), (255, 255, 255)]],
 			"colorOverLife" : [(0, 0, 0), (255, 255, 255)],
 			"colorOverDistance" : [100, [(0, 0, 0), (255, 255, 255)]],
 			"colorOverVelo" : [100, "avg", [(0, 0, 0), (255, 255, 255)]],
 			"drag" : [.15, .2],
-			"destroyOnColor" : None,
+			"deleteOnColor" : (0, 0, 0),
 		}
 		for i in range(len(attributes)):
 			default = attributes[i][1] if len(attributes[i]) > 1 else defaultSettings[attributes[i][0]]
@@ -133,7 +133,58 @@ class Particle:
 		if self.velo.x > self.maxVelo.x: self.velo.x = self.maxVelo.x
 		if self.velo.y > self.maxVelo.y: self.velo.y = self.maxVelo.y
 		self.pos += self.velo * self.delta
-		
+
+	# HELPER FUNCTIONS
+
+	'''
+	- color1
+	- color2
+	- percent
+
+	sets self.color to an interpolated point between color1 and color2 based on the percent value.
+	'''
+	def moveBetweenColors(self, color1 : tuple, color2 : tuple, percent : float):
+		r = math.floor((color2[0] - color1[0]) * percent + color1[0])
+		g = math.floor((color2[1] - color1[1]) * percent + color1[1])
+		b = math.floor((color2[2] - color1[2]) * percent + color1[2])
+		self.color = (r, g, b)
+
+	'''
+	- size1
+	- size2
+	- percent
+
+	sets self.size to an interpolated point between size1 and size2 based on the percent value.
+	'''
+	def moveBetweenSizes(self, size1 : float, size2 : float, percent : float):
+		self.size = (size2 - size1) * percent + size1
+
+	'''
+	- list
+	- percent
+	- function
+	[list is the list of possible values to interpolate between.]
+	[percent is the total percent through the list.]
+	[function is the function to use when setting the interpolated value.]
+
+	in a list, finds the correct value out of a list of values to interpolate based on the total percent value.
+	'''
+	def percentInList(self, list : list, percent : float, function):
+		for i in range(len(list)-1):
+			if percent == 0: percent = 0.001
+			elif percent > 1: percent = 1
+			if percent <= 1/(len(list)-1) * (i+1) and percent > 1/(len(list)-1) * i:
+				function(list[i], list[i+1], percent * (len(list) - 1) - i)
+
+	'''
+	deletes self from particle emitter list.
+	the actual del call is within the emitter when cycling through the list.
+	'''
+	def deleteParticle(self):
+		self.delete = True
+	
+	# PARTICLE FUNCTIONS
+
 	'''
 	- pow
 	[pow is the amount of velocity applied each frame this function is called.]
@@ -244,7 +295,7 @@ class Particle:
 	to achieve a linear increase, set pow to a single number instead of a list.
 	specific ranges can be set by inputing ranges such as [-200, 154].
 	'''
-	def adjustSize(self, settings):
+	def randAdjustSize(self, settings):
 		pow = settings[0]
 		minMax = settings[1]
 
@@ -288,29 +339,71 @@ class Particle:
 		else:
 			raise TypeError(f"type(sizeRange) != list or type. sizeRange = {sizeRange}, which is a {type(sizeRange)}.")
 		
-		for i in range(len(sizes)-1):
-			sizePercent = 1 - self.time/self.lifetime
-			if sizePercent == 0: sizePercent = 0.001
-			elif sizePercent > 1: sizePercent = 1
-			if sizePercent <= 1/(len(sizes)-1) * (i+1) and sizePercent > 1/(len(sizes)-1) * i:
-				self.size = moveBetweenSizes(sizes[i], sizes[i+1], sizePercent * (len(sizes) - 1) - i)
+		sizePercent = 1 - self.time/self.lifetime
+		self.percentInList(sizes, sizePercent, self.moveBetweenSizes)
 
+	'''
+	- settings[maxDist, sizeRange]
+	[maxDist is the maximum distance before the final size in sizeRange is reached.]
+	[sizeRange as an int/float will interpolate sizes between it's starting size and the value you put for sizeRange.]
+	[sizeRange as a list will contain all sizes that the size will interpolate between based on the particle's distance from it's emitter.]
+
+	Interpolates between sizes of the particle based on the particle's distance from it's emitter.
+	'''
 	def sizeOverDistance(self, settings):
 		maxDist = settings[0]
 		sizeRange = settings[1]
-		if type(sizeRange) == tuple:
+		if type(sizeRange) == int or type(sizeRange) == float:
 			sizes = [self.size, sizeRange]
 		elif type(sizeRange) == list:
 			sizes = sizeRange
 		else:
 			raise TypeError(f"type(sizeRange) != list or type. sizeRange = {sizeRange}, which is a {type(sizeRange)}.")
 		
-		for i in range(len(sizes)-1):
-			sizePercent = abs(math.sqrt((self.pos.x - self.emitterPos.x)**2 + (self.pos.y - self.emitterPos.y)**2)/maxDist)
-			if sizePercent == 0: sizePercent = 0.001
-			elif sizePercent > 1: sizePercent = 1
-			if sizePercent <= 1/(len(sizes)-1) * (i+1) and sizePercent > 1/(len(sizes)-1) * i:
-				self.size = moveBetweenSizes(sizes[i], sizes[i+1], sizePercent * (len(sizes) - 1) - i)
+		sizePercent = abs(math.sqrt((self.pos.x - self.emitterPos.x)**2 + (self.pos.y - self.emitterPos.y)**2)/maxDist)
+		self.percentInList(sizes, sizePercent, self.moveBetweenSizes)
+
+	'''
+	- settings[maxVelo, veloType, sizeRange]
+	[maxVelo is the velocity at which the final color is determined.]
+	[veloType is the way that the colors are calculated. The types are avg and dom.]
+		[dom is the most dominate velocity of x and y.]
+		[avg is the average velocity between x and y.]
+	[sizeRange must be at least one int/float, but specific values can be set with a list of any number more ints/floats.]
+	[sizeRange doesn't have a maximum amount of specific sizes to cycle through, and will display all sizes from left to right based on the velocity of the particle.]
+
+	Interpolates between size values based on the velocity of the particle.
+	'''
+	def sizeOverVelo(self, settings):
+		maxVelo = settings[0]
+		veloType = settings[1] if settings[1] != None else "avg"
+		sizeRange = settings[2]
+
+		if type(sizeRange) == int or type(sizeRange) == float:
+			sizes = [self.size, sizeRange]
+		elif type(sizeRange) == list:
+			sizes = sizeRange
+		else:
+			raise TypeError(f"type(sizeRange) != list or tuple. sizeRange = {sizeRange}, which is a {type(sizeRange)}.")
+		
+		if veloType == "avg":
+			colorPercent = ((abs(self.velo.x) + abs(self.velo.y))/2)/maxVelo
+		elif veloType == "dom":
+			colorPercent = (abs(self.velo.x) if abs(self.velo.x) > abs(self.velo.y) else abs(self.velo.y))/maxVelo
+		else:
+			raise NameError(f"{veloType} isn't a color option.")
+		
+		self.percentInList(sizes, colorPercent, self.moveBetweenSizes)
+
+	'''
+	- velo
+	[velo is the velo that you want to delete the particle on.]
+
+	deletes the particle if it's velo is equal to the velo passed to this function.
+	'''
+	def deleteOnVelo(self, velo : float):
+		if self.velo == velo:
+			self.deleteParticle()
 
 	'''
 	- settings[colorRange, colorType]
@@ -347,7 +440,44 @@ class Particle:
 			self.color = (random.randint(color1[0], color2[0]), random.randint(color1[1], color2[1]), random.randint(color1[2], color2[2]))
 		else:
 			raise SyntaxError(f"{randType} for randType is not a valid option.")
+	
+	def randAdjustColor(self, settings):
+		pow = settings[0]
+		minMax = settings[1]
+		#example settings
+		#[pow, [minColor, maxColor]]
+		#[5, [(0, 0, 0), (255, 255, 255)]]
+
+		#sets the minPow and maxPow depending on type(pow)
+		if type(pow) == list:
+			minPow, maxPow = pow[0], pow[1]
+		elif type(pow) == float or type(pow) == int:
+			minPow, maxPow = pow, pow
+		else:
+			raise TypeError("type(pow) != list, float, or int")
+
+		self.color = tuple(map(lambda i, j: i + j, self.color, (random.randint(minPow, maxPow), random.randint(minPow, maxPow), random.randint(minPow, maxPow))))
 		
+		minMaxAdjustList = [0, 0, 0]
+		for i in range(3):
+			if type(settings[1]) == list:
+				min = minMax[0][i]
+				max = minMax[1][i]
+			elif type(settings[1]) == tuple:
+				min = 0
+				max = minMax[1][i]
+			else:
+				raise TypeError("type(pow) != list or tuple")
+			if self.color[i] < min:
+				minMaxAdjustList[i] = min
+			elif self.color[i] > max:
+				minMaxAdjustList[i] = max
+			else:
+				minMaxAdjustList[i] = self.color[i]
+
+		self.color = (minMaxAdjustList[0], minMaxAdjustList[1], minMaxAdjustList[2])
+			
+
 	'''
 	- colorRange
 	[colorRange must be at least one (rgb) tuple, but specific values can be set with a list of any number more (rgb) tuples.]
@@ -363,10 +493,8 @@ class Particle:
 		else:
 			raise TypeError(f"type(colorRange) != list or tuple. colorRange = {colorRange}, which is a {type(colorRange)}.")
 
-		for i in range(len(colors)-1):
-			lifetimePercent = 1 - self.time/self.lifetime
-			if lifetimePercent <= 1/(len(colors)-1) * (i + 1) and lifetimePercent > 1/(len(colors)-1) * i:
-				self.color = moveBetweenColors(colors[i], colors[i+1], lifetimePercent * (len(colors) - 1) - i)
+		colorPercent = 1 - self.time/self.lifetime
+		self.percentInList(colors, colorPercent, self.moveBetweenColors)
 
 	'''
 	- settings[maxDist, colorRange]
@@ -385,12 +513,8 @@ class Particle:
 		else:
 			raise TypeError(f"type(colorRange) != list or tuple. colorRange = {colorRange}, which is a {type(colorRange)}.")
 
-		for i in range(len(colors)-1):
-			lifetimePercent = abs(math.sqrt((self.pos.x - self.emitterPos.x)**2 + (self.pos.y - self.emitterPos.y)**2)/maxDist)
-			if lifetimePercent == 0: lifetimePercent = 0.001
-			elif lifetimePercent > 1: lifetimePercent = 1
-			if lifetimePercent <= 1/(len(colors)-1) * (i + 1) and lifetimePercent > 1/(len(colors)-1) * i:
-				self.color = moveBetweenColors(colors[i], colors[i+1], lifetimePercent * (len(colors) - 1) - i)
+		colorPercent = abs(math.sqrt((self.pos.x - self.emitterPos.x)**2 + (self.pos.y - self.emitterPos.y)**2)/maxDist)
+		self.percentInList(colors, colorPercent, self.moveBetweenColors)
 
 	'''
 	- settings[maxVelo, veloType, colorRange]
@@ -415,17 +539,24 @@ class Particle:
 		else:
 			raise TypeError(f"type(colorRange) != list or tuple. colorRange = {colorRange}, which is a {type(colorRange)}.")
 
-		for i in range(len(colors)-1):
-			if veloType == "avg":
-				lifetimePercent = ((abs(self.velo.x) + abs(self.velo.y))/2)/maxVelo
-			elif veloType == "dom":
-				lifetimePercent = (abs(self.velo.x) if abs(self.velo.x) > abs(self.velo.y) else abs(self.velo.y))/maxVelo
-			else:
-				raise NameError(f"{veloType} isn't a color option.")
-			if lifetimePercent <= 0: lifetimePercent = 0.01
-			elif lifetimePercent >= 1: lifetimePercent = 1
-			if lifetimePercent <= 1/(len(colors)-1) * (i + 1) and lifetimePercent > 1/(len(colors)-1) * i:
-				self.color = moveBetweenColors(colors[i], colors[i+1], lifetimePercent * (len(colors) - 1) - i)
+		if veloType == "avg":
+			colorPercent = ((abs(self.velo.x) + abs(self.velo.y))/2)/maxVelo
+		elif veloType == "dom":
+			colorPercent = (abs(self.velo.x) if abs(self.velo.x) > abs(self.velo.y) else abs(self.velo.y))/maxVelo
+		else:
+			raise NameError(f"{veloType} isn't a color option.")
+		
+		self.percentInList(colors, colorPercent, self.moveBetweenColors)
+
+	'''
+	- color
+	[color is the color that you want to delete the particle on.]
+
+	deletes the particle if it's color is equal to the color passed to this function.
+	'''
+	def deleteOnColor(self, color : tuple):
+		if self.color == color:
+			self.deleteParticle()
 
 	'''
 	- settings[pow, minVelo]
@@ -464,7 +595,7 @@ class ParticleEmitter:
 		randAngle
 		moveOnAngle
 		randSize
-		adjustSize
+		randAdjustSize
 	
 	[ppf is particles per frame.]
 	[particle time is the lifetime of the particles]
@@ -530,5 +661,5 @@ class ParticleEmitter:
 			'''removes the particles if they aren't on screen, or if their lifetime has run out.'''
 			'''the collide rect is set to the screen, adjusted for the size of the particle'''
 			collideRect = Rect(SCREEN_RECT.x - self.particleList[i].size, SCREEN_RECT.y - self.particleList[i].size, SCREEN_RECT.w + (self.particleList[i].size * 2), SCREEN_RECT.h + (self.particleList[i].size * 2))
-			if self.particleList[i].time == 0 or (not collideRect.collidepoint(self.particleList[i].pos) and self.cull):
+			if self.particleList[i].time == 0 or self.particleList[i].delete or (not collideRect.collidepoint(self.particleList[i].pos) and self.cull):
 				del self.particleList[i]
