@@ -75,7 +75,7 @@ class Particle:
 		attributeFunctions = {
 			"randYVelo" : self.randYVelo,
 			"randXVelo" : self.randXVelo,
-			"randVelo" : None,
+			"randVelo" : self.randVelo,
 			"gravity" : self.gravity,
 			"randAngle" : self.randAngle,
 			"moveOnAngle" : self.moveOnAngle,
@@ -167,6 +167,27 @@ class Particle:
 		else:
 			powMin, powMax = pow, pow
 		self.velo += Vector2(randfloat(-powMin, powMax)/10, 0)
+
+	'''
+	- pow
+	[pow can be an int or a 2d list.]
+	[as an int/float, all default values will be set to the range -pow, pow.]
+	[as a 2d list, randXVelo and randYVelo can be set manually as [[minX, maxX], [minY, maxY]]]
+
+	applies a random X and Y velocity to the particle.
+	'''
+	def randVelo(self, pow):
+		if type(pow) == int or type(pow) == float:
+			xRange = [pow, pow]
+			yRange = [pow, pow]
+		elif type(pow) == list:
+			xRange = pow[0]
+			yRange = pow[1]
+		else:
+			raise TypeError(f"pow (a {type(pow)}) != list or int.")
+		
+		self.randXVelo(xRange)
+		self.randYVelo(yRange)
 
 	'''
 	- angles
