@@ -22,10 +22,13 @@ def randfloat(min, max):
 	return random.randint(int(min * scale), int(max * scale))/scale
 
 def moveBetweenColors(color1, color2, percent):
-			r = math.floor((color2[0] - color1[0]) * percent + color1[0])
-			g = math.floor((color2[1] - color1[1]) * percent + color1[1])
-			b = math.floor((color2[2] - color1[2]) * percent + color1[2])
-			return (r, g, b)
+	r = math.floor((color2[0] - color1[0]) * percent + color1[0])
+	g = math.floor((color2[1] - color1[1]) * percent + color1[1])
+	b = math.floor((color2[2] - color1[2]) * percent + color1[2])
+	return (r, g, b)
+
+def moveBetweenSizes(size1, size2, percent):
+	return (size2 - size1) * percent + size1
 
 class Particle:
 	'''
@@ -82,7 +85,7 @@ class Particle:
 			"randSize" : self.randSize,
 			"adjustSize" : self.adjustSize,
 			"sizeOverLife" : self.sizeOverLife,
-			"sizeOverDistance" : None,
+			"sizeOverDistance" : self.sizeOverDistance,
 			"sizeOverVelo" : None,
 			"randColor" : self.randColor,
 			"adjustColor" : None,
@@ -101,8 +104,8 @@ class Particle:
 			"moveOnAngle" : 5,
 			"randSize" : 10,
 			"adjustSize" : [2, [3, 10]],
-			"sizeOverLife" : 50,
-			"sizeOverDistance" : None,
+			"sizeOverLife" : [1, 10, 5, 10, 1],
+			"sizeOverDistance" : [100, [1, 10, 5, 10, 1]],
 			"sizeOverVelo" : None,
 			"randColor" : [(255, 255, 255)],
 			"adjustColor" : None,
@@ -172,14 +175,15 @@ class Particle:
 	- pow
 	[pow can be an int or a 2d list.]
 	[as an int/float, all default values will be set to the range -pow, pow.]
-	[as a 2d list, randXVelo and randYVelo can be set manually as [[minX, maxX], [minY, maxY]]]
+	[as a 2d list, randXVelo and randYVelo can be set manually as [[xVeloSettings], [yVeloSettings]]]
+	[xVeloSettings/yVeloSettings are structured the same as randXVelo/randYVelo]
 
 	applies a random X and Y velocity to the particle.
 	'''
 	def randVelo(self, pow):
 		if type(pow) == int or type(pow) == float:
-			xRange = [pow, pow]
-			yRange = [pow, pow]
+			xRange = pow
+			yRange = pow
 		elif type(pow) == list:
 			xRange = pow[0]
 			yRange = pow[1]
@@ -276,8 +280,37 @@ class Particle:
 
 	Linearly scales particle size between the size at init, and endSize.
 	'''
-	def sizeOverLife(self, endSize):
-		self.size += endSize/self.lifetime
+	def sizeOverLife(self, sizeRange):
+		if type(sizeRange) == tuple:
+			sizes = [self.size, sizeRange]
+		elif type(sizeRange) == list:
+			sizes = sizeRange
+		else:
+			raise TypeError(f"type(sizeRange) != list or type. sizeRange = {sizeRange}, which is a {type(sizeRange)}.")
+		
+		for i in range(len(sizes)-1):
+			sizePercent = 1 - self.time/self.lifetime
+			if sizePercent == 0: sizePercent = 0.001
+			elif sizePercent > 1: sizePercent = 1
+			if sizePercent <= 1/(len(sizes)-1) * (i+1) and sizePercent > 1/(len(sizes)-1) * i:
+				self.size = moveBetweenSizes(sizes[i], sizes[i+1], sizePercent * (len(sizes) - 1) - i)
+
+	def sizeOverDistance(self, settings):
+		maxDist = settings[0]
+		sizeRange = settings[1]
+		if type(sizeRange) == tuple:
+			sizes = [self.size, sizeRange]
+		elif type(sizeRange) == list:
+			sizes = sizeRange
+		else:
+			raise TypeError(f"type(sizeRange) != list or type. sizeRange = {sizeRange}, which is a {type(sizeRange)}.")
+		
+		for i in range(len(sizes)-1):
+			sizePercent = abs(math.sqrt((self.pos.x - self.emitterPos.x)**2 + (self.pos.y - self.emitterPos.y)**2)/maxDist)
+			if sizePercent == 0: sizePercent = 0.001
+			elif sizePercent > 1: sizePercent = 1
+			if sizePercent <= 1/(len(sizes)-1) * (i+1) and sizePercent > 1/(len(sizes)-1) * i:
+				self.size = moveBetweenSizes(sizes[i], sizes[i+1], sizePercent * (len(sizes) - 1) - i)
 
 	'''
 	- settings[colorRange, colorType]
@@ -440,7 +473,7 @@ class ParticleEmitter:
 	[initAttributes is the attributes you apply to the particles when initializing them.]
 		[possible attributes are the same as for updateAttributes.]
 	'''
-	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 10, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo : Vector2 = Vector2(100, 100)): #ppf = particles per frame
+	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 10, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo : Vector2 = Vector2(100, 100), cull : bool = True): #ppf = particles per frame
 		self.pos = pos
 		self.maxParticles = maxParticles
 		self.particleList = []
@@ -453,6 +486,7 @@ class ParticleEmitter:
 		self.initAttributes = initAttributes
 		self.size = size
 		self.maxVelo = maxVelo
+		self.cull = cull
 
 	'''
 	- screen
@@ -496,5 +530,5 @@ class ParticleEmitter:
 			'''removes the particles if they aren't on screen, or if their lifetime has run out.'''
 			'''the collide rect is set to the screen, adjusted for the size of the particle'''
 			collideRect = Rect(SCREEN_RECT.x - self.particleList[i].size, SCREEN_RECT.y - self.particleList[i].size, SCREEN_RECT.w + (self.particleList[i].size * 2), SCREEN_RECT.h + (self.particleList[i].size * 2))
-			if self.particleList[i].time == 0 or not collideRect.collidepoint(self.particleList[i].pos):
+			if self.particleList[i].time == 0 or (not collideRect.collidepoint(self.particleList[i].pos) and self.cull):
 				del self.particleList[i]

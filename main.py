@@ -19,15 +19,17 @@ testParticleEmitter = ParticleEmitter(
 	# updateAttributes = [["colorOverLife", [(0, 0, 0), (100, 20, 200), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]], ["randVelo", 2], ["gravity", -.025], ["randYVelo", [0, 1]]],
 	# initAttributes = [["randAngle", [265, 275]], ["moveOnAngle", 20]],
 	# fire fade
-	updateAttributes = [["drag"], ["gravity", .02], ["colorOverVelo", [10, "dom", [(0, 0, 0), (100, 20, 200), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]]]],
-	initAttributes = [["randAngle"], ["moveOnAngle", 20]],
+	# updateAttributes = [["drag"], ["gravity", .02], ["colorOverVelo", [10, "dom", [(0, 0, 0), (100, 20, 200), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]]]],
+	# initAttributes = [["randAngle"], ["moveOnAngle", 20]],
 	# pink fade
 	# updateAttributes = [["drag"], ["gravity", .02], ["colorOverVelo", [10, "dom", [(0, 0, 0), (100, 50, 50), (220, 100, 100), (220, 125, 125), (250, 150, 150), (0, 0, 0)]]]],
  	# initAttributes = [["randAngle"], ["moveOnAngle", 20]],
+	updateAttributes = [["gravity"], ["sizeOverLife"]],
 	maxParticles = 1000,
-	ppf = 10,
-	particleLifetime = 50,
-	size = 10
+	ppf = 1,
+	particleLifetime = 100,
+	size = 10,
+	cull = False,
 	)
 
 boss = Boss((400, 400))
