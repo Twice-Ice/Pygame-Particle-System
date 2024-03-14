@@ -2,8 +2,6 @@ import pygame
 from pygame import Vector2
 from particles import ParticleEmitter
 from globals import FPS, SCREEN_SIZE
-from boss import Boss
-from player import Player
 pygame.init()
 
 doExit = False
@@ -32,9 +30,6 @@ testParticleEmitter = ParticleEmitter(
 	particleLifetime = 1000,
 	)
 
-boss = Boss((400, 400))
-
-guy = Player(1)
 while not doExit:
 	delta = clock.tick(FPS) / 1000
 	for event in pygame.event.get():
@@ -44,7 +39,5 @@ while not doExit:
 
 	testParticleEmitter.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 
-	boss.update(screen)
-	guy.update(delta,screen)
 	pygame.display.flip()
 pygame.quit()
