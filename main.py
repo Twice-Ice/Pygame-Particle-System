@@ -19,26 +19,20 @@ testParticleEmitter = ParticleEmitter(
 	# updateAttributes = [["colorOverLife", [(0, 0, 0), (100, 20, 200), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]], ["randVelo", 2], ["gravity", -.025], ["randYVelo", [0, 1]]],
 	# initAttributes = [["randAngle", [265, 275]], ["moveOnAngle", 20]],
 	# fire fade
-	# updateAttributes = [["drag"], ["gravity", .02], ["colorOverVelo", [10, "dom", [(0, 0, 0), (100, 20, 200), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]]]],
-	# initAttributes = [["randAngle"], ["moveOnAngle", 20]],
+	updateAttributes = [["dragOverLife"], ["sizeOverVelo", [6.5, "avg", [5, 6, 7, 8, 9, 9]]], ["gravity", .02], ["deleteOnColor", [(0, 0, 0), 15]], ["colorOverVelo", [6.5, "avg", [(0, 0, 0), (50, 10, 100), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]]]],
+	initAttributes = [["randAngle"], ["moveOnAngle", 20], ["randVelo", 15]],
+	maxVelo = 15,
+	maxVeloAdjust = 5,
 	# pink fade
 	# updateAttributes = [["drag"], ["gravity", .02], ["colorOverVelo", [10, "dom", [(0, 0, 0), (100, 50, 50), (220, 100, 100), (220, 125, 125), (250, 150, 150), (0, 0, 0)]]]],
  	# initAttributes = [["randAngle"], ["moveOnAngle", 20]],
-	updateAttributes = [["gravity"], ["sizeOverVelo", [10, "avg", [10, 1]]], ["randAdjustColor", [5, [(0, 0, 0), (150, 150, 150)]]], ["deleteOnColor", (255, 0, 0)]],
+	# updateAttributes = [["gravity"], ["sizeOverVelo", [10, "avg", [10, 1]]], ["randAdjustColor", [50, [(0, 0, 0), (255, 255, 255)]]], ["deleteOnColor", (255, 0, 0)]],
 	maxParticles = 1000,
-	ppf = 1,
-	particleLifetime = 100,
-	size = 10,
+	ppf = 7.5,
+	particleLifetime = 1000,
 	)
 
 boss = Boss((400, 400))
-
-tempColor = (25, 15, 532)
-if tempColor[0] == 25:
-	adjustTuple = (-25, 0, 0)
-
-tempColor = tuple(map(lambda i, j: i + j, tempColor, adjustTuple))
-print(tempColor)
 
 guy = Player(1)
 while not doExit:

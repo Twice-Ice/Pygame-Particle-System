@@ -21,10 +21,6 @@ def randfloat(min, max):
 
 	return random.randint(int(min * scale), int(max * scale))/scale
 
-
-
-
-
 class Particle:
 	'''
 	- pos
@@ -35,7 +31,7 @@ class Particle:
 
 	Velo is set by default, but it can be updated and changed to different values within the attributes of the particle init.
 	'''
-	def __init__(self, pos : Vector2 = Vector2(0, 0), velo : Vector2 = Vector2(0, 0), emitterPos : Vector2 = Vector2(100, 100), time : int = 100, attributes : list = [], color : tuple = (255, 255, 255), size : float = 5.0, maxVelo : Vector2 = Vector2(100, 100)):
+	def __init__(self, pos : Vector2 = Vector2(0, 0), velo : Vector2 = Vector2(0, 0), emitterPos : Vector2 = Vector2(100, 100), time : int = 100, attributes : list = [], color : tuple = (255, 255, 255), size : float = 5.0, maxVelo : Vector2 = Vector2(100, 100), maxVeloAdjust : list = [-5, 5]):
 		self.pos = pos + emitterPos
 		self.velo = Vector2(0, 0) - velo/2
 		self.color = color
@@ -46,6 +42,7 @@ class Particle:
 		self.angle = 0
 		self.delta = 1
 		self.maxVelo = maxVelo
+		self.maxVeloAdjust = maxVeloAdjust
 		self.delete = False
 		self.applyAttributes(attributes)
 
@@ -60,11 +57,11 @@ class Particle:
 	'''
 	def update(self, screen, attributes, emitterPos, delta, velo : Vector2 = Vector2(0, 0)):
 		self.time -= 1 #reduces the lifetime of the particle. This should probably be set to delta and adjusted by irl time instead of frame time but whatever.
-		self.delta = delta
-		self.emitterPos = emitterPos
-		self.velo += velo
-		self.applyAttributes(attributes) #applies attributes
-		self.updatePos() #updates the position of the particle based on self.velo
+		self.delta = delta #updates local deltatime for the particle.
+		self.emitterPos = emitterPos #updates the emitter's position.
+		self.velo += velo #adds the velo of the emitter.
+		self.applyAttributes(attributes) #applies attributes.
+		self.updatePos() #updates the position of the particle based on self.velo.
 		self.draw(screen) #draws the particle to the screen.
 
 	'''
@@ -91,8 +88,10 @@ class Particle:
 			"colorOverLife" : self.colorOverLife,			
 			"colorOverDistance" : self.colorOverDistance,
 			"colorOverVelo" : self.colorOverVelo,
+			"deleteOnColor" : self.deleteOnColor,
 			"drag" : self.drag,
-			"deleteOnColor" : self.deleteOnColor, #deletes the particle when it gets to a certain color?
+			"dragOverLife" : self.dragOverLife,
+			"spreadOverVelo" : None, #should apply different randVelo attributes depending on the velocity.
 			}
 		defaultSettings = {
 			"randYVelo" : 5,
@@ -112,8 +111,10 @@ class Particle:
 			"colorOverLife" : [(0, 0, 0), (255, 255, 255)],
 			"colorOverDistance" : [100, [(0, 0, 0), (255, 255, 255)]],
 			"colorOverVelo" : [100, "avg", [(0, 0, 0), (255, 255, 255)]],
-			"drag" : [.15, .2],
 			"deleteOnColor" : (0, 0, 0),
+			"drag" : [.15, .2],
+			"dragOverLife" : [.15, .2, .2, .2, .5, 1, 5],
+			"spreadOverVelo" : None,
 		}
 		for i in range(len(attributes)):
 			default = attributes[i][1] if len(attributes[i]) > 1 else defaultSettings[attributes[i][0]]
@@ -128,10 +129,13 @@ class Particle:
 	'''
 	updates the position of the particle based on it's velo.
 	velocity is capped here based on maxVelo.
+	
+	a random adjust is applied when maxVelo is reached to avoid clumping. This can be changed by settings maxVeloAdjust in the emitter init. By default, it is set to 5.
 	'''
 	def updatePos(self):
-		if self.velo.x > self.maxVelo.x: self.velo.x = self.maxVelo.x
-		if self.velo.y > self.maxVelo.y: self.velo.y = self.maxVelo.y
+		#the velocities are capped, but also have an added random value to avoid clumping if a large selection of particles all exeed maxVelo.
+		if abs(self.velo.x) > self.maxVelo.x: self.velo.x = (self.maxVelo.x) * (self.velo.x/abs(self.velo.x)) + randfloat(self.maxVeloAdjust[0], self.maxVeloAdjust[1])
+		if abs(self.velo.y) > self.maxVelo.y: self.velo.y = (self.maxVelo.y) * (self.velo.y/abs(self.velo.y)) + randfloat(self.maxVeloAdjust[0], self.maxVeloAdjust[1])
 		self.pos += self.velo * self.delta
 
 	# HELPER FUNCTIONS
@@ -172,7 +176,7 @@ class Particle:
 	def percentInList(self, list : list, percent : float, function):
 		for i in range(len(list)-1):
 			if percent == 0: percent = 0.001
-			elif percent > 1: percent = 1
+			elif percent >= .95: percent = 1
 			if percent <= 1/(len(list)-1) * (i+1) and percent > 1/(len(list)-1) * i:
 				function(list[i], list[i+1], percent * (len(list) - 1) - i)
 
@@ -183,6 +187,16 @@ class Particle:
 	def deleteParticle(self):
 		self.delete = True
 	
+	'''
+	- color1
+	- color2
+
+	calculates the distance between color1 and color2, and then averages them out.
+	'''
+	def colorDistance(self, color1, color2):
+		colorDist = tuple(map(lambda i, j: i - j, color1, color2))
+		return abs(sum(colorDist)/len(colorDist))
+
 	# PARTICLE FUNCTIONS
 
 	'''
@@ -396,13 +410,21 @@ class Particle:
 		self.percentInList(sizes, colorPercent, self.moveBetweenSizes)
 
 	'''
-	- velo
+	- settings[velo, minDistance]
 	[velo is the velo that you want to delete the particle on.]
+	[minDistance is the minimum distance from color required to delete the particle.]
+	[minDistance is an optional setting, and settings can be passed just as velo alone. eg. 2instead of [2, 5]]
 
 	deletes the particle if it's velo is equal to the velo passed to this function.
 	'''
-	def deleteOnVelo(self, velo : float):
-		if self.velo == velo:
+	def deleteOnVelo(self, settings):
+		if type(settings) == list:
+			velo = settings[0]
+			minDistance = settings[1]
+		elif type(settings) == tuple:
+			velo = settings
+			minDistance = 2
+		if abs(self.velo - velo) <= minDistance:
 			self.deleteParticle()
 
 	'''
@@ -441,23 +463,32 @@ class Particle:
 		else:
 			raise SyntaxError(f"{randType} for randType is not a valid option.")
 	
+	'''
+	- settings = [pow, minMax]
+	[pow is the amount you want to adjust the color by each frame.]
+	[minMax is the minimum and maximum color values you can have a particle be.]
+
+	randomly adjusts the color of the particle each frame.
+
+	to achieve a linear increase, set pow to a single color instead of a list of colors.
+	specific ranges can be set by inputing ranges such as [(0, 0, 0), (255, 255, 255)].
+	'''
 	def randAdjustColor(self, settings):
 		pow = settings[0]
 		minMax = settings[1]
-		#example settings
-		#[pow, [minColor, maxColor]]
-		#[5, [(0, 0, 0), (255, 255, 255)]]
 
 		#sets the minPow and maxPow depending on type(pow)
 		if type(pow) == list:
 			minPow, maxPow = pow[0], pow[1]
 		elif type(pow) == float or type(pow) == int:
-			minPow, maxPow = pow, pow
+			minPow, maxPow = -pow, pow
 		else:
 			raise TypeError("type(pow) != list, float, or int")
 
+		#adjusts the color by random values
 		self.color = tuple(map(lambda i, j: i + j, self.color, (random.randint(minPow, maxPow), random.randint(minPow, maxPow), random.randint(minPow, maxPow))))
 		
+		#caps off each of the color values to be greater than or equal to min and less than or equal to max.
 		minMaxAdjustList = [0, 0, 0]
 		for i in range(3):
 			if type(settings[1]) == list:
@@ -477,7 +508,6 @@ class Particle:
 
 		self.color = (minMaxAdjustList[0], minMaxAdjustList[1], minMaxAdjustList[2])
 			
-
 	'''
 	- colorRange
 	[colorRange must be at least one (rgb) tuple, but specific values can be set with a list of any number more (rgb) tuples.]
@@ -549,26 +579,39 @@ class Particle:
 		self.percentInList(colors, colorPercent, self.moveBetweenColors)
 
 	'''
-	- color
+	- settings[color, minDistance]
 	[color is the color that you want to delete the particle on.]
+	[minDistance is the minimum distance from color required to delete the particle.]
+	[minDistance is an optional setting, and settings can be passed just as color alone. eg. (255, 255, 255) instead of [(255, 255, 255), 5]]
 
 	deletes the particle if it's color is equal to the color passed to this function.
 	'''
-	def deleteOnColor(self, color : tuple):
-		if self.color == color:
+	def deleteOnColor(self, settings):
+		if type(settings) == list:
+			color = settings[0]
+			minDistance = settings[1]
+		elif type(settings) == tuple:
+			color = settings
+			minDistance = 5
+		if self.colorDistance(self.color, color) < minDistance:
 			self.deleteParticle()
 
 	'''
 	- settings[pow, minVelo]
 	[pow is the amount of drag applied each frame.]
 	[minVelo is the minimum amount of velocity before setting the velo to 0. Make sure to keep minVelo > pow]
+	[minVelo can be automatically set by not inputing settings as a list an only inputing pow. In this case, minVelo is 1.25x pow.]
 
 	Applies drag to the particle each frame.
 	'''
 	def drag(self, settings):
-		pow = settings[0] * self.delta
-		minVelo = settings[1] * self.delta
-		if pow > minVelo: raise ValueError("pow > minVelo.")
+		if type(settings) == int or type(settings) == float:
+			pow = settings * self.delta
+			minVelo = pow * 1.25
+		elif type(settings) == list:
+			pow = settings[0] * self.delta
+			minVelo = settings[1] * self.delta
+			if pow > minVelo: raise ValueError("pow > minVelo.")
 
 		if abs(self.velo.x) < minVelo:
 			self.velo.x = 0
@@ -585,6 +628,20 @@ class Particle:
 				self.velo.y += pow
 			elif self.velo.y > 0:
 				self.velo.y -= pow
+
+	'''
+	- dragRange
+	[dragRange is the range of possible drag values that you can apply based on the current life of the particle.]
+	[dragRange's inputs carry the same settings as the default drag attribute.]
+	[this means you can pass integers/floats just as dragRange = [1, 1, 2, 5, etc.], ]
+	[or you can pass minVelo attributes such as dragRange = [[.25, .35], [1, 2], [.5, 1], etc.]]
+
+	applies drag based on the current life value of the particle.
+	'''
+	def dragOverLife(self, dragRange):
+		dragPercent = 1 - self.time/self.lifetime
+		currentDrag = dragRange[int((dragPercent - dragPercent % (100/len(dragRange)/100))//(100/len(dragRange)/100))]
+		self.drag(currentDrag)
 
 class ParticleEmitter:
 	'''
@@ -604,19 +661,30 @@ class ParticleEmitter:
 	[initAttributes is the attributes you apply to the particles when initializing them.]
 		[possible attributes are the same as for updateAttributes.]
 	'''
-	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 10, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo : Vector2 = Vector2(100, 100), cull : bool = True): #ppf = particles per frame
+	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 10, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo = Vector2(100, 100), maxVeloAdjust = 5, cull : bool = True): #ppf = particles per frame
 		self.pos = pos
 		self.maxParticles = maxParticles
 		self.particleList = []
 		self.ppf = ppf
-		self.spawnParticle = 0
+		self.particleSpawns = 0
 		self.delta = 1
 		self.particleLifetime = particleLifetime
 		self.color = color
 		self.updateAttributes = updateAttributes
 		self.initAttributes = initAttributes
 		self.size = size
-		self.maxVelo = maxVelo
+		if type(maxVelo) == Vector2:
+			self.maxVelo = maxVelo
+		elif type(maxVelo) == int or type(maxVelo) == float:
+			self.maxVelo = Vector2(maxVelo, maxVelo)
+		else:
+			raise TypeError(f"type(maxVelo) != Vector2, int or float. type(maxVelo) == {type(maxVelo)}")
+		if type(maxVeloAdjust) == list:
+			self.maxVeloAdjust = maxVeloAdjust
+		elif type(maxVeloAdjust) == int or type(maxVeloAdjust) == float:
+			self.maxVeloAdjust = [-maxVeloAdjust, maxVeloAdjust]
+		else:
+			raise TypeError(f"type(maxVeloAdjust) != list, int or float. type(maxVeloAdjust) == {type(maxVeloAdjust)}")
 		self.cull = cull
 
 	'''
@@ -640,19 +708,12 @@ class ParticleEmitter:
 		
 		self.delta = delta + 1
 
-		'''new particles are set up here. If the maximum particles has been reached, no new particles will be added.'''
-		if self.ppf >= 1:
-			for i in range(self.ppf):
-				if len(self.particleList) <= self.maxParticles:
-					self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo))
-		elif self.ppf < 1 and self.ppf >= 0:
-			self.spawnParticle += self.ppf
-			if self.spawnParticle > 1: 
-				self.spawnParticle -= 1
-				if len(self.particleList) <= self.maxParticles:
-					self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo))
-		else:
-			raise ValueError(f"self.ppf == {self.ppf}, which is less than 0")
+		'''new particles are set up here. If the maximum particles has been reached, no new particles will be added.'''		
+		self.particleSpawns += self.ppf
+		for i in range(math.floor(self.particleSpawns)):
+			self.particleSpawns -= 1
+			if len(self.particleList) <= self.maxParticles:
+				self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo, self.maxVeloAdjust))
 
 		'''loops through and updates all particles in the list.'''
 		for i in range(len(self.particleList)-1, 0, -1):
