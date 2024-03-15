@@ -2,7 +2,7 @@ import pygame
 import math
 import random
 from pygame import Vector2, Rect
-from globals import SCREEN_RECT
+from globals import SCREEN_SIZE, SCREEN_RECT
 
 def randfloat(min, max):
 	#gets the correct scaling to handle with random values. This allows for ranges of .0005 to .01 for example.
@@ -61,6 +61,7 @@ class Particle:
 		self.time -= 1 #reduces the lifetime of the particle. This should probably be set to delta and adjusted by irl time instead of frame time but whatever.
 		self.delta = delta #updates local deltatime for the particle.
 		self.emitterPos = emitterPos #updates the emitter's position.
+		#distance values shouldn't have to be the same as emitterPos, and instead should be handled slightly differently.
 		self.velo += velo #adds the velo of the emitter.
 		self.applyAttributes(attributes) #applies attributes.
 		self.updatePos() #updates the position of the particle based on self.velo.
@@ -74,25 +75,33 @@ class Particle:
 	def applyAttributes(self, attributes):
 		attributeFunctions = {
 			"randYVelo" : self.randYVelo,
-			"randXVelo" : self.randXVelo,
-			"randVelo" : self.randVelo,
-			"gravity" : self.gravity,
-			"randAngle" : self.randAngle,
-			"moveOnAngle" : self.moveOnAngle,
+			"randXVelo" : self.randXVelo, #
+			"randVelo" : self.randVelo, #
+			"gravity" : self.gravity, #
+			"randAngle" : self.randAngle, #
+			"moveOnAngle" : self.moveOnAngle, #
+			#drag could have different x and y settings.
 			"drag" : self.drag,
-			"dragOverLife" : self.dragOverLife,
+			"dragOverLife" : self.dragOverLife, #
+			#could have all size functions (except for randSize) have size be relative to the init size if relativeSize var == True?
+			#could also have size values passed as None and then they would just be treated as the current size value.
 			"randSize" : self.randSize,
-			"randAdjustSize" : self.randAdjustSize,
-			"sizeOverLife" : self.sizeOverLife,
+			"randAdjustSize" : self.randAdjustSize, # #could add it so that it's min and max are relative to your init size.
+			"sizeOverLife" : self.sizeOverLife, #
 			"sizeOverDistance" : self.sizeOverDistance,
 			"sizeOverVelo" : self.sizeOverVelo,
 			"randColor" : self.randColor,
-			"randAdjustColor" : self.randAdjustColor,
-			"colorOverLife" : self.colorOverLife,			
-			"colorOverDistance" : self.colorOverDistance,
-			"colorOverVelo" : self.colorOverVelo,
-			"deleteOnColor" : self.deleteOnColor,
+			"randAdjustColor" : self.randAdjustColor, #could add it so that it's min and max (along side (0, 0, 0), and (255, 255, 255)) are relative to init color.
+			#colors could be set to None, and then they would default to the init color.
+			#could have all color functions be relative to the init color if relativeColor var == True?
+			#if a color value which should be a tuple is an int, it could be set to the black and white color of that value. so if 100 is inputed, a color of (100, 100, 100) would be returned.
+			"colorOverLife" : self.colorOverLife,
+			"colorOverDistance" : self.colorOverDistance, #
+			"colorOverVelo" : self.colorOverVelo, #
+			"deleteOnColor" : self.deleteOnColor, #
 			"deleteOnVelo" : self.deleteOnVelo,
+			"deleteOnSize" : self.deleteOnSize, #
+			"deleteOnDistance" : self.deleteOnDistance,
 			"spreadOverVelo" : None, #should apply different randVelo attributes depending on the velocity.
 			}
 		defaultSettings = {
@@ -116,6 +125,8 @@ class Particle:
 			"colorOverVelo" : [100, [(0, 0, 0), (255, 255, 255)]],
 			"deleteOnColor" : (0, 0, 0),
 			"deleteOnVelo" : 0,
+			"deleteOnSize" : 0,
+			"deleteOnDistance" : 100,
 			"spreadOverVelo" : None,
 		}
 		for i in range(len(attributes)):
@@ -220,7 +231,7 @@ class Particle:
 	def randYVelo(self, pow):
 		if type(pow) == list:
 			powMin, powMax = pow[0], pow[1]
-		elif type(pow) == int or float:
+		elif type(pow) == int or type(pow) == float:
 			powMin, powMax = -pow, pow
 		else:
 			raise TypeError(f"Pow is not an int, float, or list. type(pow) = {type(pow)}")
@@ -237,7 +248,7 @@ class Particle:
 	def randXVelo(self, pow):
 		if type(pow) == list:
 			powMin, powMax = pow[0], pow[1]
-		elif type(pow) == int or float:
+		elif type(pow) == int or type(pow) == float:
 			powMin, powMax = -pow, pow
 		else:
 			raise TypeError(f"Pow is not an int, float, or list. type(pow) = {type(pow)}")
@@ -278,7 +289,7 @@ class Particle:
 			minAngle = angles[0]
 			maxAngle = angles[1]
 			self.angle = randfloat(minAngle, maxAngle)
-		elif type(angles) == int or float: 
+		elif type(angles) == int or type(angles) ==  float: 
 			self.angle = angles
 		else:
 			raise TypeError("type(angles) != list or int")
@@ -302,7 +313,7 @@ class Particle:
 	def randSize(self, sizeRange):
 		if type(sizeRange) == list:
 			self.size = randfloat(sizeRange[0], sizeRange[1])
-		elif type(sizeRange) == int or float:
+		elif type(sizeRange) == int or type(sizeRange) == float:
 			self.size = randfloat(1, sizeRange)
 		else:
 			raise TypeError(f"type(sizeRange) != list, float, or int. type(range) = {type(sizeRange)}")
@@ -325,7 +336,7 @@ class Particle:
 		if type(minMaxSize) == list:
 			minSize = minMaxSize[0]
 			maxSize = minMaxSize[1]
-		elif type(minMaxSize) == int or float:
+		elif type(minMaxSize) == int or type(minMaxSize) == float:
 			minSize = 1
 			maxSize = minMaxSize
 		else:
@@ -334,7 +345,7 @@ class Particle:
 		#sets the minPow and maxPow depending on type(pow)
 		if type(pow) == list:
 			minPow, maxPow = pow[0], pow[1]
-		elif type(pow) == int or float:
+		elif type(pow) == int or type(pow) == float:
 			minPow, maxPow = -pow, pow
 		else:
 			raise TypeError(f"type(pow) != list, float, or int. type(pow) = {type(pow)}")
@@ -354,7 +365,7 @@ class Particle:
 	Linearly scales particle size between the size at init, and endSize.
 	'''
 	def sizeOverLife(self, sizeRange):
-		if type(sizeRange) == int or float:
+		if type(sizeRange) == int or type(sizeRange) == float:
 			sizes = [self.initSize, sizeRange]
 		elif type(sizeRange) == list:
 			sizes = sizeRange
@@ -375,7 +386,7 @@ class Particle:
 	def sizeOverDistance(self, settings):
 		maxDist = settings[0]
 		sizeRange = settings[1]
-		if type(sizeRange) == int or float:
+		if type(sizeRange) == int or type(sizeRange) == float:
 			sizes = [self.initSize, sizeRange]
 		elif type(sizeRange) == list:
 			sizes = sizeRange
@@ -418,7 +429,7 @@ class Particle:
 		self.percentInList(sizes, colorPercent, self.moveBetweenSizes)
 
 	'''
-	- settings[velo, minDistance]
+	- settings[velo, minDistance, veloType]
 	[velo is the velo that you want to delete the particle on.]
 	[minDistance is the minimum distance from color required to delete the particle.]
 	[minDistance is an optional setting, and settings can be passed just as velo alone. eg. 2instead of [2, 5]]
@@ -429,10 +440,20 @@ class Particle:
 		if type(settings) == list:
 			velo = settings[0]
 			minDistance = settings[1]
-		elif type(settings) == tuple:
+			veloType = self.veloType if len(settings) < 3 else settings[2]
+		elif type(settings) == int or type(settings) == float:
 			velo = settings
 			minDistance = 2
-		if abs(self.velo - velo) <= minDistance:
+			veloType = self.veloType
+		
+		if veloType == "avg":
+			veloDistance = (abs(self.velo.x) + abs(self.velo.y))/2
+		elif veloType == "dom":
+			veloDistance = abs(self.velo.x) if abs(self.velo.x) > abs(self.velo.y) else abs(self.velo.y)
+		else:
+			raise NameError(f"{veloType} isn't a veloType option.")
+
+		if veloDistance < minDistance:
 			self.deleteParticle()
 
 	'''
@@ -605,6 +626,34 @@ class Particle:
 			self.deleteParticle()
 
 	'''
+	- settings[size, minDistance]
+	[size is the size that you want to delete the particle on.]
+	[minDistance is the minimum distance from size required to delete the particle.]
+	[minDistance is an optional setting, and settings can be passed just as size alone. eg. 0 instead of [0, 1]]
+
+	deletes the particle if it's size is equal to the size passed to this function.
+	'''
+	def deleteOnSize(self, settings):
+		if type(settings) == list:
+			size = settings[0]
+			minDistance = settings[1]
+		elif type(settings) == tuple:
+			size = settings
+			minDistance = 1
+		if abs(self.size - size) < minDistance:
+			self.deleteParticle()
+
+	'''
+	- minDistance
+	[minDistance is the minimum distance from size required to delete the particle.]
+
+	deletes the particle if it's distance is more than minDistance.
+	'''
+	def deleteOnDistance(self, minDistance):
+		if abs(math.sqrt((self.emitterPos.x - self.pos.x)**2 + (self.emitterPos.y - self.pos.y)**2)) > minDistance:
+			self.deleteParticle()
+
+	'''
 	- settings[pow, minVelo]
 	[pow is the amount of drag applied each frame.]
 	[minVelo is the minimum amount of velocity before setting the velo to 0. Make sure to keep minVelo > pow]
@@ -685,13 +734,13 @@ class ParticleEmitter:
 		self.veloType = veloType
 		if type(maxVelo) == Vector2:
 			self.maxVelo = maxVelo
-		elif type(maxVelo) == int or float:
+		elif type(maxVelo) == int or type(maxVelo) == float:
 			self.maxVelo = Vector2(maxVelo, maxVelo)
 		else:
 			raise TypeError(f"type(maxVelo) != Vector2, int or float. type(maxVelo) == {type(maxVelo)}")
 		if type(maxVeloAdjust) == list:
 			self.maxVeloAdjust = maxVeloAdjust
-		elif type(maxVeloAdjust) == int or float:
+		elif type(maxVeloAdjust) == int or type(maxVeloAdjust) == float:
 			self.maxVeloAdjust = [-maxVeloAdjust, maxVeloAdjust]
 		else:
 			raise TypeError(f"type(maxVeloAdjust) != list, int or float. type(maxVeloAdjust) == {type(maxVeloAdjust)}")
@@ -731,6 +780,7 @@ class ParticleEmitter:
 			self.particleList[i].update(screen, self.updateAttributes, delta = self.delta, emitterPos = self.pos)
 			'''removes the particles if they aren't on screen, or if their lifetime has run out.'''
 			'''the collide rect is set to the screen, adjusted for the size of the particle'''
-			collideRect = Rect(SCREEN_RECT.x - self.particleList[i].size, SCREEN_RECT.y - self.particleList[i].size, SCREEN_RECT.w + (self.particleList[i].size * 2), SCREEN_RECT.h + (self.particleList[i].size * 2))
-			if self.particleList[i].time == 0 or self.particleList[i].delete or (not collideRect.collidepoint(self.particleList[i].pos) and self.cull):
+			currentParticle = self.particleList[i]
+			collideRect = Rect(SCREEN_RECT.x - currentParticle.size, SCREEN_RECT.y - currentParticle.size, SCREEN_RECT.w + (currentParticle.size * 2), SCREEN_RECT.h + (currentParticle.size * 2))
+			if (self.particleList[i].time == 0) or (currentParticle.delete) or (type(self.cull) == bool and (not collideRect.collidepoint(currentParticle.pos) and self.cull)) or (type(self.cull) == list and ((currentParticle.pos.y + currentParticle.size < 0 and self.cull[0]) or (currentParticle.pos.x - currentParticle.size > SCREEN_SIZE[0] and self.cull[2]) or (currentParticle.pos.y - currentParticle.size > SCREEN_SIZE[1] and self.cull[3]) or (currentParticle.pos.x + currentParticle.size < 0 and self.cull[1]))):
 				del self.particleList[i]
