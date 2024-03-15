@@ -6,7 +6,7 @@ pygame.init()
 
 doExit = False
 clock = pygame.time.Clock()
-screen = pygame.display.set_mode((SCREEN_SIZE))
+screen = pygame.display.set_mode(SCREEN_SIZE)
 
 testParticleEmitter = ParticleEmitter(
 	pos = Vector2(SCREEN_SIZE)//2,
@@ -17,8 +17,19 @@ testParticleEmitter = ParticleEmitter(
 	# updateAttributes = [["colorOverLife", [(0, 0, 0), (100, 20, 200), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]], ["randVelo", 2], ["gravity", -.025], ["randYVelo", [0, 1]]],
 	# initAttributes = [["randAngle", [265, 275]], ["moveOnAngle", 20]],
 	# fire fade
-	updateAttributes = [["dragOverLife"], ["sizeOverVelo", [6.5, "avg", [5, 6, 7, 8, 9, 9]]], ["gravity", .02], ["deleteOnColor", [(0, 0, 0), 15]], ["colorOverVelo", [6.5, "avg", [(0, 0, 0), (50, 10, 100), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]]]],
-	initAttributes = [["randAngle"], ["moveOnAngle", 20], ["randVelo", 15]],
+	updateAttributes = [
+		["dragOverLife", [.15, .2, .2, .2, .5, 1, 5]],
+		["sizeOverVelo", [6.5, [5, 6, 7, 8, 9, 9]]],
+		["gravity", .02],
+		["randVelo", 2.5],
+		["deleteOnColor", [(0, 0, 0), 15]],
+		["colorOverVelo", [6.5, [(0, 0, 0), (50, 10, 100), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]]]
+	],
+	initAttributes = [
+		["randAngle"],
+		["moveOnAngle", 20],
+		["randVelo", 15]
+	],
 	maxVelo = 15,
 	maxVeloAdjust = 5,
 	# pink fade
@@ -30,6 +41,8 @@ testParticleEmitter = ParticleEmitter(
 	particleLifetime = 1000,
 	)
 
+anotherEmitter = ParticleEmitter()
+
 while not doExit:
 	delta = clock.tick(FPS) / 1000
 	for event in pygame.event.get():
@@ -38,6 +51,7 @@ while not doExit:
 	screen.fill((0, 0, 0))
 
 	testParticleEmitter.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
+	anotherEmitter.update(screen)
 
 	pygame.display.flip()
 pygame.quit()

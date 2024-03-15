@@ -1,8 +1,8 @@
 import pygame
 import math
 import random
-from pygame import Vector2, Vector3, Rect
-from globals import SCREEN_RECT, SCREEN_SIZE
+from pygame import Vector2, Rect
+from globals import SCREEN_RECT
 
 def randfloat(min, max):
 	#gets the correct scaling to handle with random values. This allows for ranges of .0005 to .01 for example.
@@ -31,7 +31,7 @@ class Particle:
 
 	Velo is set by default, but it can be updated and changed to different values within the attributes of the particle init.
 	'''
-	def __init__(self, pos : Vector2 = Vector2(0, 0), velo : Vector2 = Vector2(0, 0), emitterPos : Vector2 = Vector2(100, 100), time : int = 100, attributes : list = [], color : tuple = (255, 255, 255), size : float = 5.0, maxVelo : Vector2 = Vector2(100, 100), maxVeloAdjust : list = [-5, 5]):
+	def __init__(self, pos : Vector2 = Vector2(0, 0), velo : Vector2 = Vector2(0, 0), emitterPos : Vector2 = Vector2(100, 100), time : int = 100, attributes : list = [], color : tuple = (255, 255, 255), size : float = 5.0, maxVelo : Vector2 = Vector2(100, 100), maxVeloAdjust : list = [-5, 5], veloType : str = "avg"):
 		self.pos = pos + emitterPos
 		self.velo = Vector2(0, 0) - velo/2
 		self.color = color
@@ -39,11 +39,13 @@ class Particle:
 		self.lifetime = time
 		self.emitterPos = emitterPos
 		self.size = size
+		self.initSize = size
 		self.angle = 0
 		self.delta = 1
 		self.maxVelo = maxVelo
 		self.maxVeloAdjust = maxVeloAdjust
 		self.delete = False
+		self.veloType = veloType
 		self.applyAttributes(attributes)
 
 	# MAIN FUNCTIONS
@@ -77,20 +79,20 @@ class Particle:
 			"gravity" : self.gravity,
 			"randAngle" : self.randAngle,
 			"moveOnAngle" : self.moveOnAngle,
+			"drag" : self.drag,
+			"dragOverLife" : self.dragOverLife,
 			"randSize" : self.randSize,
 			"randAdjustSize" : self.randAdjustSize,
 			"sizeOverLife" : self.sizeOverLife,
 			"sizeOverDistance" : self.sizeOverDistance,
 			"sizeOverVelo" : self.sizeOverVelo,
-			"deleteOnVelo" : self.deleteOnVelo,
 			"randColor" : self.randColor,
 			"randAdjustColor" : self.randAdjustColor,
 			"colorOverLife" : self.colorOverLife,			
 			"colorOverDistance" : self.colorOverDistance,
 			"colorOverVelo" : self.colorOverVelo,
 			"deleteOnColor" : self.deleteOnColor,
-			"drag" : self.drag,
-			"dragOverLife" : self.dragOverLife,
+			"deleteOnVelo" : self.deleteOnVelo,
 			"spreadOverVelo" : None, #should apply different randVelo attributes depending on the velocity.
 			}
 		defaultSettings = {
@@ -100,20 +102,20 @@ class Particle:
 			"gravity" : .25,
 			"randAngle" : [0, 360],
 			"moveOnAngle" : 5,
+			"drag" : [.15, .2],
+			"dragOverLife" : [.15, .2, .5, 1, 5],
 			"randSize" : 10,
 			"randAdjustSize" : [2, [3, 10]],
 			"sizeOverLife" : [1, 10, 5, 10, 1],
 			"sizeOverDistance" : [100, [1, 10, 5, 10, 1]],
-			"sizeOverVelo" : [10, "avg", [1, 15]],
-			"deleteOnVelo" : 0,
+			"sizeOverVelo" : [10, [1, 15]],
 			"randColor" : [(255, 255, 255)],
 			"randAdjustColor" : [10, [(0, 0, 0), (255, 255, 255)]],
-			"colorOverLife" : [(0, 0, 0), (255, 255, 255)],
+			"colorOverLife" : [(255, 255, 255), (0, 0, 0)],
 			"colorOverDistance" : [100, [(0, 0, 0), (255, 255, 255)]],
-			"colorOverVelo" : [100, "avg", [(0, 0, 0), (255, 255, 255)]],
+			"colorOverVelo" : [100, [(0, 0, 0), (255, 255, 255)]],
 			"deleteOnColor" : (0, 0, 0),
-			"drag" : [.15, .2],
-			"dragOverLife" : [.15, .2, .2, .2, .5, 1, 5],
+			"deleteOnVelo" : 0,
 			"spreadOverVelo" : None,
 		}
 		for i in range(len(attributes)):
@@ -218,8 +220,11 @@ class Particle:
 	def randYVelo(self, pow):
 		if type(pow) == list:
 			powMin, powMax = pow[0], pow[1]
-		else:
+		elif type(pow) == int or float:
 			powMin, powMax = -pow, pow
+		else:
+			raise TypeError(f"Pow is not an int, float, or list. type(pow) = {type(pow)}")
+		
 		self.velo += Vector2(0, randfloat(powMin, powMax)/10)
 
 	'''
@@ -232,9 +237,12 @@ class Particle:
 	def randXVelo(self, pow):
 		if type(pow) == list:
 			powMin, powMax = pow[0], pow[1]
+		elif type(pow) == int or float:
+			powMin, powMax = -pow, pow
 		else:
-			powMin, powMax = pow, pow
-		self.velo += Vector2(randfloat(-powMin, powMax)/10, 0)
+			raise TypeError(f"Pow is not an int, float, or list. type(pow) = {type(pow)}")
+		
+		self.velo += Vector2(randfloat(powMin, powMax)/10, 0)
 
 	'''
 	- pow
@@ -269,8 +277,8 @@ class Particle:
 		if type(angles) == list:
 			minAngle = angles[0]
 			maxAngle = angles[1]
-			self.angle = random.randint(minAngle, maxAngle)
-		elif type(angles) == int: 
+			self.angle = randfloat(minAngle, maxAngle)
+		elif type(angles) == int or float: 
 			self.angle = angles
 		else:
 			raise TypeError("type(angles) != list or int")
@@ -291,13 +299,13 @@ class Particle:
 	
 	sets the size of the particle to a random size.
 	'''
-	def randSize(self, range):
-		if type(range) == list:
-			self.size = random.randint(range[0], range[1])
-		elif type(range) == int:
-			self.size = random.randint(1, range)
+	def randSize(self, sizeRange):
+		if type(sizeRange) == list:
+			self.size = randfloat(sizeRange[0], sizeRange[1])
+		elif type(sizeRange) == int or float:
+			self.size = randfloat(1, sizeRange)
 		else:
-			raise TypeError("type(range) != list or int")
+			raise TypeError(f"type(sizeRange) != list, float, or int. type(range) = {type(sizeRange)}")
 	
 	'''
 	- settings = [pow, minMax]
@@ -311,33 +319,33 @@ class Particle:
 	'''
 	def randAdjustSize(self, settings):
 		pow = settings[0]
-		minMax = settings[1]
+		minMaxSize = settings[1]
 
 		#sets all minMax values depending on type(minMax)
-		if type(minMax) == list:
-			min = minMax[0]
-			max = minMax[1]
-		elif type(minMax) == float or type(minMax) == int:
-			min = 1
-			max = minMax
+		if type(minMaxSize) == list:
+			minSize = minMaxSize[0]
+			maxSize = minMaxSize[1]
+		elif type(minMaxSize) == int or float:
+			minSize = 1
+			maxSize = minMaxSize
 		else:
-			raise TypeError("type(minMax) != list, float, or int")
+			raise TypeError(f"type(minMax) != list, float, or int. type(minMax) = {type(minMaxSize)}")
 		
 		#sets the minPow and maxPow depending on type(pow)
 		if type(pow) == list:
 			minPow, maxPow = pow[0], pow[1]
-		elif type(pow) == float or type(pow) == int:
-			minPow, maxPow = pow, pow
+		elif type(pow) == int or float:
+			minPow, maxPow = -pow, pow
 		else:
-			raise TypeError("type(pow) != list, float, or int")
+			raise TypeError(f"type(pow) != list, float, or int. type(pow) = {type(pow)}")
 		
 		self.size += randfloat(minPow, maxPow)
 			
 		#limits size to minMax values
-		if self.size < min:
-			self.size = min
-		elif self.size > max:
-			self.size = max
+		if self.size < minSize:
+			self.size = minSize
+		elif self.size > maxSize:
+			self.size = maxSize
 
 	'''
 	- endSize
@@ -346,8 +354,8 @@ class Particle:
 	Linearly scales particle size between the size at init, and endSize.
 	'''
 	def sizeOverLife(self, sizeRange):
-		if type(sizeRange) == tuple:
-			sizes = [self.size, sizeRange]
+		if type(sizeRange) == int or float:
+			sizes = [self.initSize, sizeRange]
 		elif type(sizeRange) == list:
 			sizes = sizeRange
 		else:
@@ -367,8 +375,8 @@ class Particle:
 	def sizeOverDistance(self, settings):
 		maxDist = settings[0]
 		sizeRange = settings[1]
-		if type(sizeRange) == int or type(sizeRange) == float:
-			sizes = [self.size, sizeRange]
+		if type(sizeRange) == int or float:
+			sizes = [self.initSize, sizeRange]
 		elif type(sizeRange) == list:
 			sizes = sizeRange
 		else:
@@ -380,7 +388,7 @@ class Particle:
 	'''
 	- settings[maxVelo, veloType, sizeRange]
 	[maxVelo is the velocity at which the final color is determined.]
-	[veloType is the way that the colors are calculated. The types are avg and dom.]
+	[veloType is the way that the sizes are calculated. The types are avg and dom.]
 		[dom is the most dominate velocity of x and y.]
 		[avg is the average velocity between x and y.]
 	[sizeRange must be at least one int/float, but specific values can be set with a list of any number more ints/floats.]
@@ -390,8 +398,8 @@ class Particle:
 	'''
 	def sizeOverVelo(self, settings):
 		maxVelo = settings[0]
-		veloType = settings[1] if settings[1] != None else "avg"
-		sizeRange = settings[2]
+		sizeRange = settings[1]
+		veloType = self.veloType if len(settings) < 3 else settings[2]
 
 		if type(sizeRange) == int or type(sizeRange) == float:
 			sizes = [self.size, sizeRange]
@@ -475,7 +483,7 @@ class Particle:
 	'''
 	def randAdjustColor(self, settings):
 		pow = settings[0]
-		minMax = settings[1]
+		minMaxColor = settings[1]
 
 		#sets the minPow and maxPow depending on type(pow)
 		if type(pow) == list:
@@ -492,17 +500,17 @@ class Particle:
 		minMaxAdjustList = [0, 0, 0]
 		for i in range(3):
 			if type(settings[1]) == list:
-				min = minMax[0][i]
-				max = minMax[1][i]
+				minColor = minMaxColor[0][i]
+				maxColor = minMaxColor[1][i]
 			elif type(settings[1]) == tuple:
-				min = 0
-				max = minMax[1][i]
+				minColor = 0
+				maxColor = minMaxColor[1][i]
 			else:
 				raise TypeError("type(pow) != list or tuple")
-			if self.color[i] < min:
-				minMaxAdjustList[i] = min
-			elif self.color[i] > max:
-				minMaxAdjustList[i] = max
+			if self.color[i] < minColor:
+				minMaxAdjustList[i] = minColor
+			elif self.color[i] > maxColor:
+				minMaxAdjustList[i] = maxColor
 			else:
 				minMaxAdjustList[i] = self.color[i]
 
@@ -559,8 +567,8 @@ class Particle:
 	'''
 	def colorOverVelo(self, settings):
 		maxVelo = settings[0]
-		veloType = settings[1] if settings[1] != None else "avg"
-		colorRange = settings[2]
+		colorRange = settings[1]
+		veloType = self.veloType if len(settings) < 3 else settings[2]
 
 		if type(colorRange) == tuple:
 			colors = [self.color, colorRange]
@@ -639,6 +647,7 @@ class Particle:
 	applies drag based on the current life value of the particle.
 	'''
 	def dragOverLife(self, dragRange):
+		if type(dragRange) != list: TypeError(f"dragRange != list, type(dragRange) == {type(dragRange)}")
 		dragPercent = 1 - self.time/self.lifetime
 		currentDrag = dragRange[int((dragPercent - dragPercent % (100/len(dragRange)/100))//(100/len(dragRange)/100))]
 		self.drag(currentDrag)
@@ -661,7 +670,7 @@ class ParticleEmitter:
 	[initAttributes is the attributes you apply to the particles when initializing them.]
 		[possible attributes are the same as for updateAttributes.]
 	'''
-	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 10, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo = Vector2(100, 100), maxVeloAdjust = 5, cull : bool = True): #ppf = particles per frame
+	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 100, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo = Vector2(100, 150), maxVeloAdjust = 5, cull : bool = True, veloType : str = "avg"): #ppf = particles per frame
 		self.pos = pos
 		self.maxParticles = maxParticles
 		self.particleList = []
@@ -673,15 +682,16 @@ class ParticleEmitter:
 		self.updateAttributes = updateAttributes
 		self.initAttributes = initAttributes
 		self.size = size
+		self.veloType = veloType
 		if type(maxVelo) == Vector2:
 			self.maxVelo = maxVelo
-		elif type(maxVelo) == int or type(maxVelo) == float:
+		elif type(maxVelo) == int or float:
 			self.maxVelo = Vector2(maxVelo, maxVelo)
 		else:
 			raise TypeError(f"type(maxVelo) != Vector2, int or float. type(maxVelo) == {type(maxVelo)}")
 		if type(maxVeloAdjust) == list:
 			self.maxVeloAdjust = maxVeloAdjust
-		elif type(maxVeloAdjust) == int or type(maxVeloAdjust) == float:
+		elif type(maxVeloAdjust) == int or float:
 			self.maxVeloAdjust = [-maxVeloAdjust, maxVeloAdjust]
 		else:
 			raise TypeError(f"type(maxVeloAdjust) != list, int or float. type(maxVeloAdjust) == {type(maxVeloAdjust)}")
@@ -713,7 +723,7 @@ class ParticleEmitter:
 		for i in range(math.floor(self.particleSpawns)):
 			self.particleSpawns -= 1
 			if len(self.particleList) <= self.maxParticles:
-				self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo, self.maxVeloAdjust))
+				self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo, self.maxVeloAdjust, self.veloType))
 
 		'''loops through and updates all particles in the list.'''
 		for i in range(len(self.particleList)-1, 0, -1):

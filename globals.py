@@ -1,4 +1,3 @@
-from pygame.math import Vector2
 from pygame import Rect
 
 SCREEN_SIZE = (1600, 900)#(1920, 1080)
