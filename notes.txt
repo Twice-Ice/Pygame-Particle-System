@@ -1,0 +1,5 @@
+- set up all colors to now take None as an option, and condensed all color defining code into one function instead of the same code over and over.
+- maxVelo for colorOverVelo now defaults to self.maxVelo (dominant value), it doesn't seem to go to 100 percent and idk why.
+- restructured randColor.
+- set up capColor function.
+- gotta fully write the docs for randColor.

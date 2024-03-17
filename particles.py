@@ -35,6 +35,7 @@ class Particle:
 		self.pos = pos + emitterPos
 		self.velo = Vector2(0, 0) - velo/2
 		self.color = color
+		self.initColor = color
 		self.time = time
 		self.lifetime = time
 		self.emitterPos = emitterPos
@@ -75,19 +76,19 @@ class Particle:
 	def applyAttributes(self, attributes):
 		attributeFunctions = {
 			"randYVelo" : self.randYVelo,
-			"randXVelo" : self.randXVelo, #
-			"randVelo" : self.randVelo, #
-			"gravity" : self.gravity, #
-			"randAngle" : self.randAngle, #
-			"moveOnAngle" : self.moveOnAngle, #
+			"randXVelo" : self.randXVelo,
+			"randVelo" : self.randVelo,
+			"gravity" : self.gravity,
+			"randAngle" : self.randAngle,
+			"moveOnAngle" : self.moveOnAngle,
 			#drag could have different x and y settings.
 			"drag" : self.drag,
-			"dragOverLife" : self.dragOverLife, #
+			"dragOverLife" : self.dragOverLife,
 			#could have all size functions (except for randSize) have size be relative to the init size if relativeSize var == True?
 			#could also have size values passed as None and then they would just be treated as the current size value.
 			"randSize" : self.randSize,
-			"randAdjustSize" : self.randAdjustSize, # #could add it so that it's min and max are relative to your init size.
-			"sizeOverLife" : self.sizeOverLife, #
+			"randAdjustSize" : self.randAdjustSize, #could add it so that it's min and max are relative to your init size.
+			"sizeOverLife" : self.sizeOverLife,
 			"sizeOverDistance" : self.sizeOverDistance,
 			"sizeOverVelo" : self.sizeOverVelo,
 			"randColor" : self.randColor,
@@ -96,11 +97,11 @@ class Particle:
 			#could have all color functions be relative to the init color if relativeColor var == True?
 			#if a color value which should be a tuple is an int, it could be set to the black and white color of that value. so if 100 is inputed, a color of (100, 100, 100) would be returned.
 			"colorOverLife" : self.colorOverLife,
-			"colorOverDistance" : self.colorOverDistance, #
-			"colorOverVelo" : self.colorOverVelo, #
-			"deleteOnColor" : self.deleteOnColor, #
+			"colorOverDistance" : self.colorOverDistance,
+			"colorOverVelo" : self.colorOverVelo,
+			"deleteOnColor" : self.deleteOnColor,
 			"deleteOnVelo" : self.deleteOnVelo,
-			"deleteOnSize" : self.deleteOnSize, #
+			"deleteOnSize" : self.deleteOnSize,
 			"deleteOnDistance" : self.deleteOnDistance,
 			"spreadOverVelo" : None, #should apply different randVelo attributes depending on the velocity.
 			}
@@ -122,7 +123,7 @@ class Particle:
 			"randAdjustColor" : [10, [(0, 0, 0), (255, 255, 255)]],
 			"colorOverLife" : [(255, 255, 255), (0, 0, 0)],
 			"colorOverDistance" : [100, [(0, 0, 0), (255, 255, 255)]],
-			"colorOverVelo" : [100, [(0, 0, 0), (255, 255, 255)]],
+			"colorOverVelo" : [self.maxVelo.x if self.maxVelo.x > self.maxVelo.y else self.maxVelo.y, [(0, 0, 0), (255, 255, 255)]],
 			"deleteOnColor" : (0, 0, 0),
 			"deleteOnVelo" : 0,
 			"deleteOnSize" : 0,
@@ -209,6 +210,57 @@ class Particle:
 	def colorDistance(self, color1, color2):
 		colorDist = tuple(map(lambda i, j: i - j, color1, color2))
 		return abs(sum(colorDist)/len(colorDist))
+
+	'''
+	- color
+	- createList
+
+	Defines color based on the type of color.
+	CreateList will create a list even if the inputed color is just a single color. (defaulting to [self.initColor, inputedColor]).
+	If color is none, the color will be self.color at init.
+	If it's an int/float, it will be a black and white version of that color.
+	If it's an (r, g, b) color, it will stay that color.
+	A list of colors can be inputted as well.
+	'''
+	def defineColor(self, color, createList):
+		def define(definingColor):
+			if definingColor == None:
+				return self.initColor
+			elif type(definingColor) == int or type(definingColor) == float:
+				return (definingColor, definingColor, definingColor)
+			elif type(definingColor) == tuple:
+				return definingColor
+			else:
+				raise TypeError(f"The inputed color != int, float, None, or tuple. type(color) == {type(definingColor)}")
+			
+		if type(color) == list:
+			tempList = []
+			for i in range(len(color)):
+				tempList.append(define(color[i]))
+			return tempList
+		elif createList:
+			return[self.initColor, define(color)]
+		else:
+			return define(color)
+
+	'''
+	- color
+	- minColor
+	- maxColor
+
+	caps the color values of color to minColor and maxColor values.
+	'''
+	def capColor(self, color, minColor, maxColor):
+		cappedColor = [0, 0, 0]
+		for i in range(3):
+			if color[i] < minColor[i]:
+				cappedColor[i] = (minColor[i])
+			elif color[i] > maxColor[i]:
+				cappedColor[i] = (maxColor[i])
+			else:
+				cappedColor[i] = (color[i])
+
+		return (cappedColor[0], cappedColor[1], cappedColor[2])
 
 	# PARTICLE FUNCTIONS
 
@@ -465,30 +517,29 @@ class Particle:
 	'''
 	def randColor(self, settings):
 		if type(settings) == list:
-			colorRange = settings[0]
-			try:
-				randType = settings[1]
-			except:
-				randType = "color"
+			colorRange = self.defineColor(settings[0], True)
+			randType = settings[1]
+		elif type(settings) == tuple or type(settings) == int or type(settings) == float or settings == None:
+			colorRange = self.defineColor(settings, True)
+			randType = "color"
 		else:
-			raise TypeError(f"Settings not set properly.\nSettings should include color values as well as the type of random color.\nSuch as \"monotone,\" the 2nd index can be left blank and the type will default to colored.")
-		if type(colorRange) == list:
-			color1 = colorRange[0]
-			color2 = colorRange[1]
-		elif type(colorRange) == tuple:
-			color1 = (0, 0, 0)
-			color2 = colorRange
-		else:
-			raise TypeError(f"ColorRange != list or tuple, colorRange is a {type(colorRange)}")
+			raise TypeError(f"Settings not set propperly. Settings should be a list, tuple, int, float, or None. type(settings) == {type(settings)}")
+		
+		#sorts the colors so that whichever values are smallest ARE SMALLEST. and whichever are biggest, ARE BIGGEST.
+		tempMin= colorRange[0]
+		tempMax = colorRange[1]
+		minColor = (tempMin[0] if tempMin[0] < tempMax[0] else tempMax[0], tempMin[1] if tempMin[1] < tempMax[1] else tempMax[1], tempMin[2] if tempMin[2] < tempMax[2] else tempMax[2])
+		maxColor = (tempMax[0] if tempMax[0] > tempMin[0] else tempMin[0], tempMax[1] if tempMax[1] > tempMin[1] else tempMin[1], tempMax[2] if tempMax[2] > tempMin[2] else tempMin[2])
 		
 		if randType == "monotone":
 			val = random.randint(0, 100)/100
-			r = math.floor((color2[0] - color1[0]) * val + color1[0])
-			g = math.floor((color2[1] - color1[1]) * val + color1[1])
-			b = math.floor((color2[2] - color1[2]) * val + color1[2])
-			self.color = self.color + (r, g, b)
+			r = math.floor((maxColor[0] - minColor[0]) * val + minColor[0])
+			g = math.floor((maxColor[1] - minColor[1]) * val + minColor[1])
+			b = math.floor((maxColor[2] - minColor[2]) * val + minColor[2])
+			self.color = (r, g, b)
+			self.color = self.capColor(self.color, minColor, maxColor)
 		elif randType == "color":
-			self.color = (random.randint(color1[0], color2[0]), random.randint(color1[1], color2[1]), random.randint(color1[2], color2[2]))
+			self.color = (random.randint(minColor[0], maxColor[0]), random.randint(minColor[1], maxColor[1]), random.randint(minColor[2], maxColor[2]))
 		else:
 			raise SyntaxError(f"{randType} for randType is not a valid option.")
 	
@@ -504,7 +555,7 @@ class Particle:
 	'''
 	def randAdjustColor(self, settings):
 		pow = settings[0]
-		minMaxColor = settings[1]
+		minMaxColor = self.defineColor(settings[1])
 
 		#sets the minPow and maxPow depending on type(pow)
 		if type(pow) == list:
@@ -545,12 +596,7 @@ class Particle:
 	Interpolates between color values over the lifespan of a particle.
 	'''
 	def colorOverLife(self, colorRange):
-		if type(colorRange) == tuple:
-			colors = [self.color, colorRange]
-		elif type(colorRange) == list:
-			colors = colorRange
-		else:
-			raise TypeError(f"type(colorRange) != list or tuple. colorRange = {colorRange}, which is a {type(colorRange)}.")
+		colors = self.defineColor(colorRange, True)
 
 		colorPercent = 1 - self.time/self.lifetime
 		self.percentInList(colors, colorPercent, self.moveBetweenColors)
@@ -564,13 +610,7 @@ class Particle:
 	'''
 	def colorOverDistance(self, settings):
 		maxDist = settings[0]
-		colorRange = settings[1]
-		if type(colorRange) == tuple:
-			colors = [self.color, colorRange]
-		elif type(colorRange) == list:
-			colors = colorRange
-		else:
-			raise TypeError(f"type(colorRange) != list or tuple. colorRange = {colorRange}, which is a {type(colorRange)}.")
+		colors = self.defineColor(settings[1], True)
 
 		colorPercent = abs(math.sqrt((self.pos.x - self.emitterPos.x)**2 + (self.pos.y - self.emitterPos.y)**2)/maxDist)
 		self.percentInList(colors, colorPercent, self.moveBetweenColors)
@@ -588,15 +628,8 @@ class Particle:
 	'''
 	def colorOverVelo(self, settings):
 		maxVelo = settings[0]
-		colorRange = settings[1]
+		colors = self.defineColor(settings[1], True)
 		veloType = self.veloType if len(settings) < 3 else settings[2]
-
-		if type(colorRange) == tuple:
-			colors = [self.color, colorRange]
-		elif type(colorRange) == list:
-			colors = colorRange
-		else:
-			raise TypeError(f"type(colorRange) != list or tuple. colorRange = {colorRange}, which is a {type(colorRange)}.")
 
 		if veloType == "avg":
 			colorPercent = ((abs(self.velo.x) + abs(self.velo.y))/2)/maxVelo
@@ -617,10 +650,10 @@ class Particle:
 	'''
 	def deleteOnColor(self, settings):
 		if type(settings) == list:
-			color = settings[0]
+			color = self.defineColor(settings[0])
 			minDistance = settings[1]
 		elif type(settings) == tuple:
-			color = settings
+			color = self.defineColor(settings)
 			minDistance = 5
 		if self.colorDistance(self.color, color) < minDistance:
 			self.deleteParticle()
