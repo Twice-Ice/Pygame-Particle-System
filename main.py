@@ -123,10 +123,10 @@ while not doExit:
 			doExit = True #lets you quit parogram
 	screen.fill((0, 0, 0))
 
-	testEmitter.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
+	# testEmitter.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# transLight.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# flashlight.update(screen, delta, pos = pygame.mouse.get_pos())
-	# fireFade.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
+	fireFade.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# snow.update(screen, delta, pos = Vector2(SCREEN_SIZE[0]//2, -100))
 	# spidercerseCircles.update(screen, delta, pos = pygame.mouse.get_pos())
 

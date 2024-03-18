@@ -3,3 +3,7 @@
 - restructured randColor.
 - set up capColor function.
 - gotta fully write the docs for randColor.
+
+- could have all settings defined in the init of the particles instead of every time the particle is updated.
+- condensed the drag function, and got rid of minVelo as a setting and have it now just as pow*1.25
+- drag can now take in different x and y values.

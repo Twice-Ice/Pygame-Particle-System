@@ -81,7 +81,6 @@ class Particle:
 			"gravity" : self.gravity,
 			"randAngle" : self.randAngle,
 			"moveOnAngle" : self.moveOnAngle,
-			#drag could have different x and y settings.
 			"drag" : self.drag,
 			"dragOverLife" : self.dragOverLife,
 			#could have all size functions (except for randSize) have size be relative to the init size if relativeSize var == True?
@@ -93,9 +92,7 @@ class Particle:
 			"sizeOverVelo" : self.sizeOverVelo,
 			"randColor" : self.randColor,
 			"randAdjustColor" : self.randAdjustColor, #could add it so that it's min and max (along side (0, 0, 0), and (255, 255, 255)) are relative to init color.
-			#colors could be set to None, and then they would default to the init color.
 			#could have all color functions be relative to the init color if relativeColor var == True?
-			#if a color value which should be a tuple is an int, it could be set to the black and white color of that value. so if 100 is inputed, a color of (100, 100, 100) would be returned.
 			"colorOverLife" : self.colorOverLife,
 			"colorOverDistance" : self.colorOverDistance,
 			"colorOverVelo" : self.colorOverVelo,
@@ -112,7 +109,7 @@ class Particle:
 			"gravity" : .25,
 			"randAngle" : [0, 360],
 			"moveOnAngle" : 5,
-			"drag" : [.15, .2],
+			"drag" : .15,
 			"dragOverLife" : [.15, .2, .5, 1, 5],
 			"randSize" : 10,
 			"randAdjustSize" : [2, [3, 10]],
@@ -222,7 +219,7 @@ class Particle:
 	If it's an (r, g, b) color, it will stay that color.
 	A list of colors can be inputted as well.
 	'''
-	def defineColor(self, color, createList):
+	def defineColor(self, color, createList = False):
 		def define(definingColor):
 			if definingColor == None:
 				return self.initColor
@@ -687,37 +684,36 @@ class Particle:
 			self.deleteParticle()
 
 	'''
-	- settings[pow, minVelo]
-	[pow is the amount of drag applied each frame.]
-	[minVelo is the minimum amount of velocity before setting the velo to 0. Make sure to keep minVelo > pow]
-	[minVelo can be automatically set by not inputing settings as a list an only inputing pow. In this case, minVelo is 1.25x pow.]
+	- pow
+	[pow is the pixels of drag applied each frame.]
 
 	Applies drag to the particle each frame.
 	'''
-	def drag(self, settings):
-		if type(settings) == int or type(settings) == float:
-			pow = settings * self.delta
-			minVelo = pow * 1.25
-		elif type(settings) == list:
-			pow = settings[0] * self.delta
-			minVelo = settings[1] * self.delta
-			if pow > minVelo: raise ValueError("pow > minVelo.")
+	def drag(self, pow):
+		pow = pow if type(pow) != list else pow[0]
+		if type(pow) == int or type(pow) == float:
+			pow = Vector2(pow, pow)
+		elif type(pow) == list:
+			pow = Vector2(pow[0], pow[1])
+		elif type(pow) != Vector2:
+			raise TypeError(f"type(pow) != int, float, list, or Vector2. type(pow) == {type(pow)}")
+		minVelo = Vector2(pow.x*1.25, pow.y*1.25)
 
-		if abs(self.velo.x) < minVelo:
+		if abs(self.velo.x) < minVelo.y:
 			self.velo.x = 0
 		else:
 			if self.velo.x < 0:
-				self.velo.x += pow
+				self.velo.x += pow.x
 			elif self.velo.x > 0:
-				self.velo.x -= pow
+				self.velo.x -= pow.x
 
-		if abs(self.velo.y) < minVelo:
+		if abs(self.velo.y) < minVelo.x:
 			self.velo.y = 0
 		else:
 			if self.velo.y < 0:
-				self.velo.y += pow
+				self.velo.y += pow.y
 			elif self.velo.y > 0:
-				self.velo.y -= pow
+				self.velo.y -= pow.y
 
 	'''
 	- dragRange
