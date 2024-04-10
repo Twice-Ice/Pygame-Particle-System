@@ -19,7 +19,15 @@ def randfloat(min, max):
 			maxScale = 0
 		scale = minScale if minScale > maxScale else maxScale
 
-	return random.randint(int(min * scale), int(max * scale))/scale
+	minVal = int(min * scale)
+	maxVal = int(max * scale)
+
+	if minVal > maxVal:
+		temp = minVal
+		minVal = maxVal
+		maxVal = temp
+
+	return random.randint(minVal, maxVal)/scale
 
 class Particle:
 	'''
@@ -100,7 +108,6 @@ class Particle:
 			"deleteOnVelo" : self.deleteOnVelo,
 			"deleteOnSize" : self.deleteOnSize,
 			"deleteOnDistance" : self.deleteOnDistance,
-			"spreadOverVelo" : None, #should apply different randVelo attributes depending on the velocity.
 			}
 		defaultSettings = {
 			"randYVelo" : 5,
@@ -109,14 +116,14 @@ class Particle:
 			"gravity" : .25,
 			"randAngle" : [0, 360],
 			"moveOnAngle" : 5,
-			"drag" : .15,
+			"drag" : [.15, .2],
 			"dragOverLife" : [.15, .2, .5, 1, 5],
 			"randSize" : 10,
 			"randAdjustSize" : [2, [3, 10]],
 			"sizeOverLife" : [1, 10, 5, 10, 1],
 			"sizeOverDistance" : [100, [1, 10, 5, 10, 1]],
 			"sizeOverVelo" : [10, [1, 15]],
-			"randColor" : [(255, 255, 255)],
+			"randColor" : (255, 255, 255),
 			"randAdjustColor" : [10, [(0, 0, 0), (255, 255, 255)]],
 			"colorOverLife" : [(255, 255, 255), (0, 0, 0)],
 			"colorOverDistance" : [100, [(0, 0, 0), (255, 255, 255)]],
@@ -125,7 +132,6 @@ class Particle:
 			"deleteOnVelo" : 0,
 			"deleteOnSize" : 0,
 			"deleteOnDistance" : 100,
-			"spreadOverVelo" : None,
 		}
 		for i in range(len(attributes)):
 			default = attributes[i][1] if len(attributes[i]) > 1 else defaultSettings[attributes[i][0]]
@@ -733,20 +739,7 @@ class Particle:
 class ParticleEmitter:
 	'''
 	Attribute list:
-		randYVelo
-		randXVelo
-		gravity
-		randAngle
-		moveOnAngle
-		randSize
-		randAdjustSize
-	
-	[ppf is particles per frame.]
-	[particle time is the lifetime of the particles]
-	[updateAttributes is the attributes you apply to the particles when updating them.]
-		[possible attributes include: randXVelo, randYVelo, gravity, randAngle, and moveOnAngle.]
-	[initAttributes is the attributes you apply to the particles when initializing them.]
-		[possible attributes are the same as for updateAttributes.]
+		please check the wiki or refer to the def of applyAttributes.
 	'''
 	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 100, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo = Vector2(100, 150), maxVeloAdjust = 5, cull : bool = True, veloType : str = "avg", spawnOnMove = False): #ppf = particles per frame
 		self.pos = pos

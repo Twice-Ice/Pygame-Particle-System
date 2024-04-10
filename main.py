@@ -16,7 +16,7 @@ fireFade = ParticleEmitter(
 		["gravity", .02],
 		["randVelo", 2.5],
 		["deleteOnColor", [(0, 0, 0), 15]],
-		["colorOverVelo", [6.5, [(0, 0, 0), (50, 10, 100), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]]]
+		["colorOverVelo", [6.5, [(0, 0, 0), (50, 10, 100), (255, 75, 20), (255, 100, 50), (255, 125, 50), (255, 200, 75)]]],
 	],
 	initAttributes = [
 		["randAngle"],
@@ -78,7 +78,7 @@ snow = ParticleEmitter(
 	cull = [False, True, True, True],
 )
 
-spidercerseCircles = ParticleEmitter(
+spiderverseCircles = ParticleEmitter(
 	updateAttributes = [
 		["randAdjustColor", [50, [(0, 0, 0), (255, 25, 255)]]],
 		["deleteOnVelo", [0, .25]],
@@ -128,9 +128,9 @@ while not doExit:
 	# testEmitter.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# transLight.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# flashlight.update(screen, delta, pos = pygame.mouse.get_pos())
-	fireFade.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
+	# fireFade.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# snow.update(screen, delta, pos = Vector2(SCREEN_SIZE[0]//2, -100))
-	# spidercerseCircles.update(screen, delta, pos = pygame.mouse.get_pos())
+	spiderverseCircles.update(screen, delta, pos = pygame.mouse.get_pos())
 
 	pygame.display.flip()
 pygame.quit()
