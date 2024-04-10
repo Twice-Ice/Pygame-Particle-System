@@ -748,7 +748,7 @@ class ParticleEmitter:
 	[initAttributes is the attributes you apply to the particles when initializing them.]
 		[possible attributes are the same as for updateAttributes.]
 	'''
-	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 100, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo = Vector2(100, 150), maxVeloAdjust = 5, cull : bool = True, veloType : str = "avg"): #ppf = particles per frame
+	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 100, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo = Vector2(100, 150), maxVeloAdjust = 5, cull : bool = True, veloType : str = "avg", spawnOnMove = False): #ppf = particles per frame
 		self.pos = pos
 		self.maxParticles = maxParticles
 		self.particleList = []
@@ -761,6 +761,7 @@ class ParticleEmitter:
 		self.initAttributes = initAttributes
 		self.size = size
 		self.veloType = veloType
+		self.spawnOnMove = spawnOnMove
 		if type(maxVelo) == Vector2:
 			self.maxVelo = maxVelo
 		elif type(maxVelo) == int or type(maxVelo) == float:
@@ -796,12 +797,14 @@ class ParticleEmitter:
 		
 		self.delta = delta + 1
 
-		'''new particles are set up here. If the maximum particles has been reached, no new particles will be added.'''		
-		self.particleSpawns += self.ppf
-		for i in range(math.floor(self.particleSpawns)):
-			self.particleSpawns -= 1
-			if len(self.particleList) <= self.maxParticles:
-				self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo, self.maxVeloAdjust, self.veloType))
+		'''new particles are set up here. If the maximum particles has been reached, no new particles will be added.'''
+		'''only spawns particles when the mouse is moving IF self.spawnOnMove is set to True.'''
+		if (self.spawnOnMove and (velo != Vector2(0, 0))) or not self.spawnOnMove:
+			self.particleSpawns += self.ppf
+			for i in range(math.floor(self.particleSpawns)):
+				self.particleSpawns -= 1
+				if len(self.particleList) <= self.maxParticles:
+					self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo, self.maxVeloAdjust, self.veloType))
 
 		'''loops through and updates all particles in the list.'''
 		for i in range(len(self.particleList)-1, 0, -1):
