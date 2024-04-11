@@ -29,7 +29,7 @@ fireFade = ParticleEmitter(
 	ppf = 7.5,
 	particleLifetime = 1000,
 	spawnOnMove = True,
-	)
+)
 
 transLight = ParticleEmitter(
 	updateAttributes = [
@@ -60,7 +60,6 @@ transLight = ParticleEmitter(
 	particleLifetime = 250,
 	maxParticles = 1000,
 	ppf = 10,
-	size = 2,
 )
 
 snow = ParticleEmitter(
@@ -128,9 +127,9 @@ while not doExit:
 	# testEmitter.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# transLight.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# flashlight.update(screen, delta, pos = pygame.mouse.get_pos())
-	# fireFade.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
+	fireFade.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# snow.update(screen, delta, pos = Vector2(SCREEN_SIZE[0]//2, -100))
-	spiderverseCircles.update(screen, delta, pos = pygame.mouse.get_pos())
+	# spiderverseCircles.update(screen, delta, pos = pygame.mouse.get_pos())
 
 	pygame.display.flip()
 pygame.quit()
