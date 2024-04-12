@@ -804,8 +804,8 @@ class ParticleEmitter:
 		if self.spawnType == "default": #spawns particles without considering the emitter's velocity
 			spawnParticles(self.ppf)
 		elif self.spawnType == "onMove": #spawns particles based on the velocity of the emitter.
-			if self.ppfMaxVelo == None:
-				raise ValueError("self.spawnType == \"onMove\", but self.ppfMaxVelo was never set! Please set self.ppfMaxVelo to a value > 0.")
+			if self.ppfMaxVelo == None or self.ppfMaxVelo < 0:
+				raise ValueError("self.spawnType == \"onMove\", but self.ppfMaxVelo was never set properly! Please set self.ppfMaxVelo to a value > 0.")
 			
 			if self.veloType == "avg":
 				velo1D = (abs(velo.x) + abs(velo.y))/2
