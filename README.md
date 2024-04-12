@@ -14,6 +14,26 @@ An expansive particle system for any and all uses within the hobbyist game libra
 </div>
 <p style="text-align: center;">Text with basic formatting applied</p>
 
+<div align="center">
+
+  <a href="https://github.com/Twice-Ice/Pygame-Particle-System/wiki">
+    <img src="https://img.shields.io/badge/Wiki-red?style=for-the-badge" alt="Wiki">
+  </a>
+
+  &ensp;&ensp;&ensp;
+
+  <a href="URL_TO_YOUR_WIKI">
+    <img src="https://img.shields.io/badge/Wiki-red?style=for-the-badge" alt="Wiki">
+  </a>
+
+  &ensp;&ensp;&ensp;
+
+  <a href="URL_TO_YOUR_WIKI">
+    <img src="https://img.shields.io/badge/Wiki-red?style=for-the-badge" alt="Wiki">
+  </a>
+
+</div>
+
 
 ## Features
 
