@@ -3,8 +3,7 @@
 # Pygame Particle System
 
 An expansive particle system for any and all uses within the hobbyist game library, Pygame.
-
-[Button Example]: https://img.shields.io/badge/Title-37a779?style=for-the-badge
+[Link]: # 'Link with example title.'
 
 
 ## Features
