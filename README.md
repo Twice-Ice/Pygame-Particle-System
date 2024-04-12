@@ -13,18 +13,23 @@
 </div>
 
 <p align="center">
-  <br><br><br>
+  <br><br><br><br>
   <img src="https://github.com/Twice-Ice/Pygame-Particle-System/blob/main/gifs/pikachuSadj.gif" alt="animated" />
 </p>
 
-## Features
+<h2 align="center">Features</h2>
 
 - 20+ particle attributes to configure to create the desired effect
 
-- Simple and quick particle emitter implmentation
+- Simple and quick particle emitter implementation
 
 - 10+ starter peramiters
 
-- Full wiki covering how to use the library with quick and easy implimentation
+- Full wiki covering how to use the library with quick and easy implementation
 
-## Contacts
+<h2 align="center">Contacts</h2>
+
+<div align="center">
+ <a href="https://discordapp.com/users/642540928866975767"><img src="https://img.shields.io/badge/Discord-white?logo=discord&logoColor=white&style=for-the-badge&color=5670cc" alt="Discord"></a>
+</div>
+
