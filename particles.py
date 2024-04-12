@@ -741,10 +741,11 @@ class ParticleEmitter:
 	Attribute list:
 		please check the wiki or refer to the def of applyAttributes.
 	'''
-	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 100, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo = Vector2(100, 150), maxVeloAdjust = 5, cull : bool = True, veloType : str = "avg", spawnOnMove = False): #ppf = particles per frame
+	def __init__(self, pos = Vector2(0, 0), updateAttributes : list = [["randXVelo", 5], ["gravity", .25], ["colorOverLife", [(255, 255, 255), (255, 255, 255), (0, 0, 0)]]], initAttributes : list = [], maxParticles : int = 100, ppf : float = 1, particleLifetime : int = 100, color : tuple = (255, 255, 255), size : float = 10, maxVelo = Vector2(100, 150), maxVeloAdjust = 5, cull : bool = True, veloType : str = "avg", spawnOnMove = False, spawnType = "default", ppfMaxVelo : int = None): #ppf = particles per frame
 		self.pos = pos
 		self.maxParticles = maxParticles
 		self.particleList = []
+		self.basePpf = ppf
 		self.ppf = ppf
 		self.particleSpawns = 0
 		self.delta = 1
@@ -755,6 +756,8 @@ class ParticleEmitter:
 		self.size = size
 		self.veloType = veloType
 		self.spawnOnMove = spawnOnMove
+		self.spawnType = spawnType
+		self.ppfMaxVelo = ppfMaxVelo
 		if type(maxVelo) == Vector2:
 			self.maxVelo = maxVelo
 		elif type(maxVelo) == int or type(maxVelo) == float:
@@ -781,23 +784,40 @@ class ParticleEmitter:
 
 	Updates the emitter and every particle from the emitter. 
 	'''
-	def update(self, screen, delta = 1, pos = None, velo = None):
+	def update(self, screen, delta : int = 1, pos = None, velo : Vector2 = Vector2(0, 0)):
 		'''if the particle emitter is moved, this is where it updates self.pos.'''
 		if pos != None: 
 			self.pos = Vector2(pos)
-		if velo == None:
-			velo = Vector2(0, 0)
 		
 		self.delta = delta + 1
 
-		'''new particles are set up here. If the maximum particles has been reached, no new particles will be added.'''
-		'''only spawns particles when the mouse is moving IF self.spawnOnMove is set to True.'''
-		if (self.spawnOnMove and (velo != Vector2(0, 0))) or not self.spawnOnMove:
-			self.particleSpawns += self.ppf
+		'''New particles are set up here. If the maximum particles has been reached, no new particles will be added.
+		   ppf can be changed and adjusted when inputed into this function, allowing for better functionality of use.'''
+		def spawnParticles(ppf):
+			self.particleSpawns += ppf
 			for i in range(math.floor(self.particleSpawns)):
 				self.particleSpawns -= 1
-				if len(self.particleList) <= self.maxParticles:
-					self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size, self.maxVelo, self.maxVeloAdjust, self.veloType))
+				if not len(self.particleList) >= self.maxParticles:
+					self.particleList.append(Particle(Vector2(0, 0), velo, self.pos, self.particleLifetime, self.initAttributes, self.color, self.size,	self.maxVelo, self.maxVeloAdjust, self.veloType))
+		
+		'''Determines how many particles are spawned and then calls the function to spawn particles.'''
+		if self.spawnType == "default": #spawns particles without considering the emitter's velocity
+			spawnParticles(self.ppf)
+		elif self.spawnType == "onMove": #spawns particles based on the velocity of the emitter.
+			if self.ppfMaxVelo == None:
+				raise ValueError("self.spawnType == \"onMove\", but self.ppfMaxVelo was never set! Please set self.ppfMaxVelo to a value > 0.")
+			
+			if self.veloType == "avg":
+				velo1D = (abs(velo.x) + abs(velo.y))/2
+			elif self.veloType == "dom":
+				velo1D = abs(velo.x) if abs(velo.x) > abs(velo.y) else abs(velo.y)
+
+			percent = velo1D/self.ppfMaxVelo
+			if percent > 1: #to prevent going over the intended ppf if the velocity is too high.
+				percent = 1
+
+			spawnParticles(self.basePpf*percent)
+
 
 		'''loops through and updates all particles in the list.'''
 		for i in range(len(self.particleList)-1, 0, -1):

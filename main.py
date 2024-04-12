@@ -28,7 +28,8 @@ fireFade = ParticleEmitter(
 	maxParticles = 1000,
 	ppf = 7.5,
 	particleLifetime = 1000,
-	spawnOnMove = True,
+	spawnType = "onMove",
+	ppfMaxVelo = 2.5
 )
 
 transLight = ParticleEmitter(
