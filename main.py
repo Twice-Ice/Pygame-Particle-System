@@ -2,6 +2,8 @@ import pygame
 from pygame import Vector2
 from particles import ParticleEmitter
 from globals import FPS, SCREEN_SIZE
+import math
+import random
 pygame.init()
 
 doExit = False
@@ -105,18 +107,82 @@ flashlight = ParticleEmitter(
 	ppf = 10,
 )
 
-testEmitter = ParticleEmitter(
-	ppf = 10,
-	maxParticles = 1000,
-	updateAttributes = [
-		["randColor", [None, "color"]]
-	],
-	initAttributes = [
-		["randAngle"],
-		["moveOnAngle", 20],
-	],
-	maxVelo = Vector2(20, 20),
-)
+# testEmitter = ParticleEmitter(
+# 	ppf = 5,
+# 	maxParticles = 1000,
+# 	updateAttributes = [
+# 		["gravity"],
+# 		["colorOverLife", [(0, 255, 175), (0, 0, 0)]],
+# 		["deleteOnColor", (0, 0, 0)],
+# 		["sizeOverVelo", [50, [1, 5, 5, 10]]]
+# 	],
+# 	initAttributes = [
+# 		["randVelo", 5],
+# 		["gravity", 1]
+# 	],
+# )
+
+# center = Vector2(SCREEN_SIZE[0]/2, SCREEN_SIZE[1]/2)
+# angle = 0
+# value = 0
+# direction = True
+# dist = 100
+# ehfdhs = 10
+# maxVal = random.randint(5, ehfdhs)
+# tempPos = Vector2(center.x + math.cos(math.radians(angle))*dist, center.y + math.sin(math.radians(angle))*dist)
+
+class circleEmitter:
+	def __init__(self, pos : Vector2):
+		self.emitter = ParticleEmitter(
+			ppf = 1,
+			maxParticles = 1000,
+			updateAttributes = [
+				["gravity"],
+				["colorOverDistance", [250, [(255, 255, 255), (0, 0, 0)]]],
+				["deleteOnColor", (0, 0, 0)],
+				["sizeOverVelo", [5, [1, 5]]]
+			],
+			initAttributes = [
+				["randVelo", 5],
+				["gravity", 1]
+			],
+		)
+		self.emitter.particleSpawns += random.randint(0, 100)/100
+		center = pos
+		self.pos = pos
+		self.angle = random.randint(0, 360)
+		self.value = 0
+		self.direction = True
+		self.lr = 1 if random.randint(0, 10) % 2 else -1
+		self.dist = 100
+		self.ehfdhs = 10
+		self.maxVal = random.randint(5, self.ehfdhs)
+		self.idk = random.randint(1, 5)
+		self.tempPos = Vector2(center.x + math.cos(math.radians(self.angle))*self.dist, center.y + math.sin(math.radians(self.angle))*self.dist)
+
+	def update(self, screen, delta):
+		if self.direction:
+			self.value += .25
+		if self.value == self.maxVal:
+			self.direction = False
+		elif not self.direction:
+			self.value -= .25
+			if self.value == 0:
+				self.direction = True
+				self.maxVal = random.randint(5, self.ehfdhs)
+		
+		# pygame.draw.circle(screen, (25, 25, 25), self.pos, 100, 1)
+
+		self.old = self.tempPos
+		# self.angle += (self.value/2) * self.lr
+		self.tempPos = Vector2(self.pos.x + math.cos(math.radians(self.angle))*self.dist, self.pos.y + math.sin(math.radians(self.angle))*self.dist)
+		self.emitter.update(screen, delta, self.tempPos, Vector2((self.old - self.tempPos).x * self.idk, (self.old - self.tempPos).y * self.idk))
+		# pygame.draw.circle(screen, (255, 0, 0), self.tempPos, 5)
+
+theList = []
+
+for i in range(500):
+	theList.append(circleEmitter(Vector2(random.randint(0, SCREEN_SIZE[0]), random.randint(0, SCREEN_SIZE[1]))))
 
 while not doExit:
 	delta = clock.tick(FPS) / 1000
@@ -128,9 +194,29 @@ while not doExit:
 	# testEmitter.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# transLight.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# flashlight.update(screen, delta, pos = pygame.mouse.get_pos())
-	fireFade.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
+	# fireFade.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# snow.update(screen, delta, pos = Vector2(SCREEN_SIZE[0]//2, -100))
 	# spiderverseCircles.update(screen, delta, pos = pygame.mouse.get_pos())
+	# if direction:
+	# 	value += .25
+	# 	if value == maxVal:
+	# 		direction = False
+	# elif not direction:
+	# 	value -= .25
+	# 	if value == 0:
+	# 		direction = True
+	# 		maxVal = random.randint(5, ehfdhs)
+	
+	# pygame.draw.circle(screen, (25, 25, 25), center, 100, 1)
+
+	# old = tempPos
+	# angle += value/2
+	# tempPos = Vector2(center.x + math.cos(math.radians(angle))*dist, center.y + math.sin(math.radians(angle))*dist)
+	# testEmitter.update(screen, delta, tempPos, Vector2((old - tempPos).x * value, (old - tempPos).y * value))
+	# pygame.draw.circle(screen, (255, 0, 0), tempPos, 5)
+
+	for item in theList:
+		item.update(screen, delta)
 
 	pygame.display.flip()
 pygame.quit()
