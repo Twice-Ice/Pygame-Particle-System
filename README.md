@@ -32,4 +32,3 @@
 <div align="center">
  <a href="https://discordapp.com/users/642540928866975767"><img src="https://img.shields.io/badge/Discord-white?logo=discord&logoColor=white&style=for-the-badge&color=5670cc" alt="Discord"></a>
 </div>
-

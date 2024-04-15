@@ -1,4 +1,6 @@
 import pygame
+import random
+import math
 from pygame import Vector2
 from particles import ParticleEmitter
 from globals import FPS, SCREEN_SIZE
@@ -28,8 +30,8 @@ fireFade = ParticleEmitter(
 	maxParticles = 1000,
 	ppf = 7.5,
 	particleLifetime = 1000,
-	spawnType = "onMove",
-	ppfMaxVelo = 2.5
+	# spawnType = "onMove",
+	# ppfMaxVelo = 2.5
 )
 
 transLight = ParticleEmitter(
@@ -118,6 +120,51 @@ testEmitter = ParticleEmitter(
 	maxVelo = Vector2(20, 20),
 )
 
+
+class fireyStuff:
+	def __init__(self, pos : Vector2):
+		self.pos = pos
+		self.oldPos = self.pos
+		self.particles = fireFade
+
+	def update(self, screen, delta):
+		self.particles.update(screen, delta, pos = self.pos, velo = 2 * (self.old - self.pos))
+		print( 2 * (self.old - self.pos))
+
+class bonkers(fireyStuff):
+	def __init__(self, pos: Vector2):
+		super().__init__(pos)
+		self.newLoc()
+		self.speed = 2
+
+	def newLoc(self):
+		self.startPos = self.pos
+		self.endPos = Vector2(random.randint(0, SCREEN_SIZE[0]), random.randint(0, SCREEN_SIZE[1]))
+
+	def moveToLoc(self):
+		direction = self.endPos - self.pos
+		distance = direction.length()
+		self.speed = (self.startPos - self.endPos).length()/15
+
+		if distance <= 25:
+			self.newLoc()
+		
+		if distance > 0:
+			direction.normalize_ip()
+			self.pos += direction * self.speed
+
+		return self.pos
+
+	def update(self, screen, delta):
+		self.old = self.pos
+		
+		self.pos = self.moveToLoc()
+		# pygame.draw.circle(screen, (255, 255, 255), self.endPos, 10)
+		# pygame.draw.circle(screen, (255, 0, 0), self.pos, 5)
+		super().update(screen, delta)
+
+newBonkers = bonkers(Vector2(SCREEN_SIZE[0]/2, SCREEN_SIZE[1]/2))
+
 while not doExit:
 	delta = clock.tick(FPS) / 1000
 	for event in pygame.event.get():
@@ -125,10 +172,12 @@ while not doExit:
 			doExit = True #lets you quit parogram
 	screen.fill((0, 0, 0))
 
+	newBonkers.update(screen, delta)
+
 	# testEmitter.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# transLight.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# flashlight.update(screen, delta, pos = pygame.mouse.get_pos())
-	fireFade.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
+	# fireFade.update(screen, delta, pos = pygame.mouse.get_pos(), velo = -Vector2(pygame.mouse.get_rel())/7.5)
 	# snow.update(screen, delta, pos = Vector2(SCREEN_SIZE[0]//2, -100))
 	# spiderverseCircles.update(screen, delta, pos = pygame.mouse.get_pos())
 
